@@ -37,11 +37,11 @@ export function NavBar() {
   return (
     <header className="sticky top-0 z-10 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur">
       <nav className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-6">
-        <Link href="/" className="font-semibold tracking-tight flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-indigo-600 text-white text-sm">
+        <Link href="/" className="font-semibold tracking-tight flex items-center gap-2 group">
+          <span className="glow-accent inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-600 via-violet-600 to-cyan-500 text-white text-sm shadow-md transition-transform group-hover:scale-110 group-hover:rotate-6">
             ✈
           </span>
-          Job Pilot
+          <span className="gradient-text text-base">Job Pilot</span>
         </Link>
         <ul className="flex items-center gap-1 text-sm">
           {LINKS.map((l) => {
@@ -51,10 +51,10 @@ export function NavBar() {
               <li key={l.href}>
                 <Link
                   href={l.href}
-                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                  className={`px-3 py-1.5 rounded-md transition-all ${
                     active
-                      ? "bg-indigo-600 text-white"
-                      : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10"
+                      ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm"
+                      : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:-translate-y-0.5"
                   }`}
                 >
                   {l.label}

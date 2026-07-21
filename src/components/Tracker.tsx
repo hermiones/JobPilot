@@ -56,18 +56,20 @@ export function Tracker() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="fade-in-up flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tracker</h1>
+          <h1 className="text-3xl font-bold tracking-tight gradient-text">
+            The Paper Trail
+          </h1>
           <p className="text-sm text-black/60 dark:text-white/60">
-            {total} application{total === 1 ? "" : "s"} in your pipeline.
+            {total} application{total === 1 ? "" : "s"} and counting — every one, receipts included.
           </p>
         </div>
         <a
           href="/api/export"
-          className="rounded-md border border-black/10 dark:border-white/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
+          className="rounded-md border border-black/10 dark:border-white/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10 hover:-translate-y-0.5"
         >
-          Export CSV
+          📤 Export CSV
         </a>
       </div>
 
@@ -90,15 +92,17 @@ export function Tracker() {
       )}
 
       {loading ? (
-        <p className="text-sm text-black/60 dark:text-white/60 py-8 text-center">
-          Loading…
-        </p>
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-12 rounded-lg shimmer" style={{ ["--delay" as string]: `${i * 60}ms` }} />
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <p className="text-sm text-black/60 dark:text-white/60 py-8 text-center">
-          No applications{filter !== "all" ? ` with status “${STATUS_LABEL[filter]}”` : ""}.
+        <p className="fade-in-up text-sm text-black/60 dark:text-white/60 py-8 text-center">
+          Nothing here yet{filter !== "all" ? ` with status “${STATUS_LABEL[filter]}”` : ""} — go make it happen in the Review Queue.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-black/10 dark:border-white/10">
+        <div className="fade-in-up overflow-x-auto rounded-xl border border-black/10 dark:border-white/10 card-surface">
           <table className="w-full text-sm">
             <thead className="bg-black/[0.03] dark:bg-white/[0.03] text-left">
               <tr>
@@ -177,10 +181,10 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+      className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${
         active
-          ? "bg-indigo-600 text-white border-indigo-600"
-          : "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10"
+          ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent shadow-sm"
+          : "border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 hover:-translate-y-0.5"
       }`}
     >
       {children}

@@ -60,12 +60,11 @@ export function BoardsManager() {
     "w-full rounded-md border border-black/15 dark:border-white/15 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500";
 
   return (
-    <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5 space-y-4">
+    <div className="fade-in-up card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5 space-y-4" style={{ ["--delay" as string]: "260ms" }}>
       <div>
-        <h2 className="font-medium">Job boards</h2>
+        <h2 className="font-medium">🛰️ Job boards</h2>
         <p className="text-sm text-black/60 dark:text-white/60">
-          Auto-discover public Greenhouse/Lever boards to pull jobs from. Only
-          active boards are fetched.
+          Point Job Pilot at company boards to pull from. Only active ones get scanned.
         </p>
       </div>
 
@@ -73,9 +72,9 @@ export function BoardsManager() {
         <button
           onClick={() => discover(false)}
           disabled={discovering}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+          className="glow-accent rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100"
         >
-          {discovering ? "Discovering…" : "Auto-discover boards"}
+          {discovering ? "🔭 Scanning the horizon…" : "🔭 Auto-discover boards"}
         </button>
       </div>
 

@@ -117,7 +117,7 @@ export function ReviewCard({
     bullets || (result ? result.tailoredBullets.join("\n") : "");
 
   return (
-    <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md overflow-hidden">
+    <div className="fade-in-up card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md overflow-hidden">
       {/* Header */}
       <div className="p-5 border-b border-black/5 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
@@ -134,11 +134,12 @@ export function ReviewCard({
           </div>
           {match && (
             <div className="text-right shrink-0">
-              <div className={`text-2xl font-bold ${scoreColor(match.relevanceScore)}`}>
+              <div className={`text-3xl font-black tabular-nums ${scoreColor(match.relevanceScore)}`}>
                 {Math.round(match.relevanceScore)}
+                <span className="text-sm font-medium opacity-60">%</span>
               </div>
-              <div className="text-xs text-black/50 dark:text-white/50">
-                relevance
+              <div className="text-xs text-black/50 dark:text-white/50 uppercase tracking-wide">
+                match score
               </div>
             </div>
           )}
@@ -169,17 +170,17 @@ export function ReviewCard({
         {/* Tailored docs */}
         <div className="p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">AI-tailored documents</h3>
+            <h3 className="text-sm font-medium">✨ AI-tailored documents</h3>
             <button
               onClick={tailor}
               disabled={tailoring}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+              className="glow-accent rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100"
             >
               {tailoring
-                ? "Generating…"
+                ? "✨ Working the magic…"
                 : result
-                ? "Regenerate"
-                : "Generate with AI"}
+                ? "🔁 Regenerate"
+                : "✨ Generate with AI"}
             </button>
           </div>
 
@@ -189,8 +190,8 @@ export function ReviewCard({
 
           {!result && !tailoring && (
             <p className="text-sm text-black/50 dark:text-white/50">
-              Click “Generate with AI” to tailor resume bullets and a cover letter
-              to this job using Gemini.
+              Hit &quot;Generate with AI&quot; for a tailored resume and cover letter,
+              built from your master resume for this exact job.
             </p>
           )}
 
@@ -282,14 +283,14 @@ export function ReviewCard({
           disabled={busy}
           className="rounded-md border border-black/15 dark:border-white/15 px-4 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-60"
         >
-          Skip
+          ✋ Skip
         </button>
         <button
           onClick={approveAndOpen}
           disabled={busy}
-          className="rounded-md bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-60"
+          className="glow-accent rounded-md bg-gradient-to-r from-green-600 to-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100"
         >
-          Approve &amp; Open →
+          🚀 Approve &amp; Open →
         </button>
       </div>
     </div>

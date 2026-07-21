@@ -9,7 +9,9 @@ import {
   Dodecahedron,
   Octahedron,
   TorusKnot,
+  Sparkles,
 } from "@react-three/drei";
+import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 
@@ -21,12 +23,14 @@ function Shape({
   kind,
   scale = 1,
   speed = 1,
+  wireframe = false,
 }: {
   position: [number, number, number];
   color: string;
   kind: ShapeKind;
   scale?: number;
   speed?: number;
+  wireframe?: boolean;
 }) {
   const ref = useRef<Mesh>(null);
   useFrame((_, delta) => {
@@ -35,21 +39,25 @@ function Shape({
       ref.current.rotation.y += delta * 0.22 * speed;
     }
   });
-  const material = (
+  const material = wireframe ? (
+    <meshBasicMaterial color={color} wireframe transparent opacity={0.5} />
+  ) : (
     <meshStandardMaterial
       color={color}
-      roughness={0.3}
-      metalness={0.65}
+      roughness={0.25}
+      metalness={0.7}
+      emissive={color}
+      emissiveIntensity={0.35}
       transparent
-      opacity={0.6}
+      opacity={0.7}
     />
   );
   return (
     <Float
       speed={1.2 * speed}
       rotationIntensity={0.7}
-      floatIntensity={1.6}
-      floatingRange={[-0.4, 0.4]}
+      floatIntensity={1.8}
+      floatingRange={[-0.5, 0.5]}
     >
       {kind === "ico" && (
         <Icosahedron ref={ref} args={[1, 0]} position={position} scale={scale}>
@@ -88,8 +96,8 @@ function Rig({ children }: { children: React.ReactNode }) {
 
   useFrame(({ clock, pointer }) => {
     if (!group.current) return;
-    target.current.x = THREE.MathUtils.lerp(target.current.x, pointer.y * 0.18, 0.03);
-    target.current.y = THREE.MathUtils.lerp(target.current.y, pointer.x * 0.25, 0.03);
+    target.current.x = THREE.MathUtils.lerp(target.current.x, pointer.y * 0.2, 0.03);
+    target.current.y = THREE.MathUtils.lerp(target.current.y, pointer.x * 0.3, 0.03);
 
     group.current.rotation.x = target.current.x;
     group.current.rotation.y =
@@ -112,7 +120,10 @@ export function Background3D() {
         { position: [2, -3, -2.5], color: "#c084fc", kind: "octa", scale: 0.8, speed: 1 },
         { position: [-2, 3.2, -3.5], color: "#818cf8", kind: "knot", scale: 0.7, speed: 0.7 },
         { position: [5.5, 0.5, -6], color: "#67e8f9", kind: "octa", scale: 0.6, speed: 1.4 },
-        { position: [-1, -1.5, -1.5], color: "#a5b4fc", kind: "ico", scale: 0.45, speed: 1.6 },
+        { position: [-1, -1.5, -1.5], color: "#a5b4fc", kind: "ico", scale: 0.45, speed: 1.6, wireframe: true },
+        { position: [1.5, 3.5, -2], color: "#f472b6", kind: "octa", scale: 0.4, speed: 1.8, wireframe: true },
+        { position: [-6, -1.5, -2], color: "#34d399", kind: "ico", scale: 0.55, speed: 1.1, wireframe: true },
+        { position: [6, -2.5, -3], color: "#fbbf24", kind: "torus", scale: 0.5, speed: 1.5, wireframe: true },
       ] as const,
     []
   );
@@ -120,17 +131,17 @@ export function Background3D() {
   return (
     <div
       aria-hidden
-      className="fixed inset-0 -z-10 pointer-events-none opacity-70 dark:opacity-60"
+      className="fixed inset-0 -z-10 pointer-events-none opacity-80 dark:opacity-70"
     >
       <Canvas
         camera={{ position: [0, 0, 8], fov: 50 }}
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
       >
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={1.2} />
-        <pointLight position={[-5, -5, 2]} intensity={0.9} color="#8b5cf6" />
-        <pointLight position={[5, 4, -2]} intensity={0.6} color="#22d3ee" />
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[5, 5, 5]} intensity={1.1} />
+        <pointLight position={[-5, -5, 2]} intensity={1} color="#8b5cf6" />
+        <pointLight position={[5, 4, -2]} intensity={0.7} color="#22d3ee" />
         <Rig>
           {shapes.map((s, i) => (
             <Shape
@@ -140,9 +151,27 @@ export function Background3D() {
               kind={s.kind}
               scale={s.scale}
               speed={s.speed}
+              wireframe={"wireframe" in s ? s.wireframe : false}
             />
           ))}
+          <Sparkles
+            count={80}
+            scale={[16, 10, 10]}
+            size={2.5}
+            speed={0.3}
+            opacity={0.6}
+            color="#a5b4fc"
+          />
         </Rig>
+        <EffectComposer>
+          <Bloom
+            intensity={0.7}
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.9}
+            mipmapBlur
+          />
+          <Vignette eskil={false} offset={0.15} darkness={0.6} />
+        </EffectComposer>
       </Canvas>
     </div>
   );

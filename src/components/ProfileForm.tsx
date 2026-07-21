@@ -113,14 +113,16 @@ export function ProfileForm() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+      <div className="fade-in-up">
+        <h1 className="text-3xl font-bold tracking-tight gradient-text">
+          Your Command Center
+        </h1>
         <p className="text-sm text-black/60 dark:text-white/60">
-          Set once — used to score jobs and tailor every application.
+          Set it once — everything downstream (matching, tailoring, scheduling) runs off this.
         </p>
       </div>
 
-      <div className={`${card} space-y-4`}>
+      <div className={`fade-in-up ${card} space-y-4`} style={{ ["--delay" as string]: "80ms" }}>
         <div>
           <label className={label}>Master resume</label>
           <textarea
@@ -211,7 +213,7 @@ export function ProfileForm() {
       </div>
 
       {/* Automation schedule */}
-      <div className={`${card} space-y-4`}>
+      <div className={`fade-in-up ${card} space-y-4`} style={{ ["--delay" as string]: "140ms" }}>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-medium">Automation schedule (IST)</h2>
@@ -268,7 +270,7 @@ export function ProfileForm() {
       </div>
 
       {/* Cover letter tones */}
-      <div className={`${card} space-y-4`}>
+      <div className={`fade-in-up ${card} space-y-4`} style={{ ["--delay" as string]: "200ms" }}>
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Cover letter tones</h2>
           <button
@@ -326,13 +328,13 @@ export function ProfileForm() {
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+          className="glow-accent rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100"
         >
-          {saving ? "Saving…" : "Save profile"}
+          {saving ? "Saving…" : "💾 Save profile"}
         </button>
         {saved && (
-          <span className="text-sm text-green-600 dark:text-green-400">
-            Saved ✓
+          <span className="text-sm text-green-600 dark:text-green-400 fade-in-up">
+            Locked in ✓
           </span>
         )}
       </div>

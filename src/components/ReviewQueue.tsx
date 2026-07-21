@@ -32,21 +32,30 @@ export function ReviewQueue() {
   }, [items.length]);
 
   if (loading) {
-    return <p className="text-black/60 dark:text-white/60">Loading queue…</p>;
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-56 rounded-md shimmer" />
+        <div className="h-96 rounded-xl shimmer" />
+      </div>
+    );
   }
 
   const remaining = items.length;
 
   if (remaining === 0) {
     return (
-      <div className="text-center py-16 space-y-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Queue empty</h1>
+      <div className="fade-in-up text-center py-16 space-y-3">
+        <div className="text-5xl mb-2">🏁</div>
+        <h1 className="text-2xl font-bold tracking-tight gradient-text">
+          Queue&apos;s clear
+        </h1>
         <p className="text-black/60 dark:text-white/60">
-          No jobs to review. Refresh listings from the dashboard to fill the queue.
+          Nothing left to review right now. Hit refresh on the dashboard to
+          summon more matches.
         </p>
         <Link
           href="/"
-          className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+          className="glow-accent inline-block rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-medium text-white hover:brightness-110"
         >
           Go to dashboard
         </Link>
@@ -59,11 +68,13 @@ export function ReviewQueue() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="fade-in-up flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Review Queue</h1>
+          <h1 className="text-3xl font-bold tracking-tight gradient-text">
+            The Queue
+          </h1>
           <p className="text-sm text-black/60 dark:text-white/60">
-            {safeIndex + 1} of {remaining} · ranked by relevance
+            {safeIndex + 1} of {remaining} · ranked by relevance, best match first
           </p>
         </div>
         <div className="flex gap-2">
