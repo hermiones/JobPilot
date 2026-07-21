@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApplicationStatus {
+  queued
+  approved
+  applied
+  responded
+  interview
+  rejected
+  offer
+}
+
+model User {
+  id                     String   @id @default(cuid())
+  email                  String   @unique
+  masterResume           String // free-text resume content used as the base for tailoring
+  coverLetterTemplates   String // JSON array of { tone: string, body: string }
+  targetRoles            String // JSON array of strings
+  targetLocations        String // JSON array of strings
+  salaryFloor            Int?
+  excludedCompanies      String // JSON array of strings
+  dailyGoal              Int      @default(50)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  applications Application[]
+  matches      Match[]
+}
+
+model JobListing {
+  id          String   @id @default(cuid())
+  source      String // greenhouse | lever | remoteok | adzuna | manual
+  externalId  String // id from the source system, used for de-duplication
+  title       String
+  company     String
+  location    String?
+  url         String
+  description String
+  postedDate  DateTime?
+  salaryRange String?
+  fetchedAt   DateTime @default(now())
+
+  applications Application[]
+  matches      Match[]
+
+  @@unique([source, externalId])
+  @@index([company, title])
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  userId           String
+  jobListingId     String
+  status           ApplicationStatus @default(queued)
+  resumeVersion    String? // tailored resume text snapshot used for this application
+  coverLetterVersion String? // tailored cover letter text snapshot used for this application
+  appliedAt        DateTime?
+  lastUpdated      DateTime          @updatedAt
+  notes            String?
+  followUpDate     DateTime?
+  createdAt        DateTime          @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  jobListing JobListing @relation(fields: [jobListingId], references: [id])
+
+  @@unique([userId, jobListingId])
+  @@index([userId, status])
+}
+
+model Match {
+  id             String   @id @default(cuid())
+  userId         String
+  jobListingId   String
+  relevanceScore Float
+  reasons        String // JSON array of strings explaining the score
+  createdAt      DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  jobListing JobListing @relation(fields: [jobListingId], references: [id])
+
+  @@unique([userId, jobListingId])
+  @@index([userId, relevanceScore])
+}

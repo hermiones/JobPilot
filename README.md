@@ -1,102 +1,126 @@
-PRD: JobBlast — High-Volume Job Application Assistant
-1. Summary
-JobBlast helps a job seeker apply to ~50 relevant jobs/day by combining job aggregation, AI-tailored resume/cover-letter generation, and a fast review-and-submit workflow — without violating job board terms of service or spamming employers with generic copies.
-Core assumption (please confirm/adjust): This is a semi-automated tool. The app never logs into LinkedIn/Indeed on the user's behalf or auto-submits without a human click. It automates the slow parts (finding jobs, tailoring documents, tracking status) and leaves a single "Apply" click per job so submission stays compliant and the user stays in control.
-2. Problem Statement
-Manually applying to 50 jobs/day is impossible because each application requires: finding the listing, reading the JD, tailoring a resume/cover letter, filling the form, and tracking status. Job seekers either burn hours per application or spam identical resumes that get filtered by ATS keyword matching.
-3. Goals
-Cut time-per-application from ~15 min to <2 min
-Maintain per-job tailoring (keywords, tone) to survive ATS screening
-Track every application's status in one place (no spreadsheet)
-Surface only relevant, non-duplicate, non-expired listings
-Non-Goals (v1)
-No fully unattended auto-submit / bot login to third-party sites
-No email/LinkedIn scraping that violates platform ToS
-No guarantee of interview/offer outcomes
-4. Target User
-Active job seeker doing a high-volume search (e.g., post-layoff, career switch, new grad) applying across multiple platforms daily.
-5. Core User Flow
-User sets up profile once: master resume, 2–3 cover letter tones, target roles, locations, salary floor, excluded companies.
-App pulls new matching listings daily from job board APIs / RSS feeds.
-For each listing, app scores relevance (keyword + title + seniority match) and shows a ranked queue.
-User taps a card → sees JD + AI-tailored resume bullets + AI-drafted cover letter (editable).
-User clicks "Approve & Open" → app opens the job's real application page in a new tab with the tailored resume/cover letter ready to paste/upload; user does the final click on the employer's site.
-App logs the application (company, role, date, documents used, status = Applied).
-Dashboard shows daily count toward the 50/day goal, funnel (Applied → Response → Interview → Offer/Reject), and follow-up reminders (e.g., nudge at day 7 with no response).
-6. Feature List (v1 / MVP)
-Feature
-Description
-Priority
-Job aggregation
-Pull listings via official APIs/RSS (e.g., Greenhouse, Lever, RemoteOK, Adzuna API) — no scraping sites that forbid it
-P0
-Relevance scoring
-Simple keyword/title/seniority match against user profile
-P0
-AI resume tailoring
-Rewrite bullet order/wording per JD using an LLM, from one master resume
-P0
-AI cover letter draft
-Generate short, JD-specific cover letter from template + user tone
-P0
-Review & approve UI
-Fast keyboard-driven review screen (swipe/approve/skip)
-P0
-Application tracker
-Status pipeline, notes, dates, document version used
-P0
-Daily goal dashboard
-Progress bar toward daily target, streaks
-P1
-Follow-up reminders
-Auto-flag applications with no response after N days
-P1
-Duplicate detection
-Prevent re-applying to same company/role
-P1
-Export
-CSV export of application log
-P2
-Browser extension
-Autofill helper for ATS forms (Workday, Greenhouse) using stored profile data — user still clicks submit
-P2
-7. Data Model (high-level)
-User
- - id, email, master_resume, cover_letter_templates[], target_roles[], target_locations[], salary_floor, excluded_companies[]
-JobListing
- - id, source, title, company, location, url, description, posted_date, salary_range, fetched_at
-Application
- - id, user_id, job_listing_id, status (queued|approved|applied|responded|interview|rejected|offer)
- - resume_version, cover_letter_version, applied_at, last_updated, notes, follow_up_date
-Match
- - id, user_id, job_listing_id, relevance_score, reasons[]
-8. Tech Stack (Replit-friendly)
-Frontend: React + Tailwind CSS (single-page dashboard + review queue)
-Backend: Node.js/Express or Next.js API routes
-Database: Replit DB or Postgres (Supabase/Neon) for structured data
-AI: Anthropic API (Claude) for resume tailoring + cover letter generation
-Job data sources: Public/official APIs only — Greenhouse Job Board API, Lever Postings API, RemoteOK API, Adzuna API (all allow programmatic access)
-Auth: Simple email/password or magic link (single-user tool, no need for OAuth complexity in v1)
-Scheduling: Cron job (daily) to refresh listings
-9. Non-Functional Requirements
-Daily job fetch completes in <2 min for ~500 listings scanned
-AI tailoring response <10 sec per job
-All third-party API calls respect rate limits and published ToS
-User's resume/personal data never sent to third parties beyond the LLM call itself
-10. Success Metrics
-Median time per application ≤ 2 minutes
-≥40 applications/day sustained by an active user
-≥30% of listings shown are marked "relevant" by user (proxy for scoring quality)
-11. Risks / Open Questions
-ToS risk: Any job board without a public API (most consumer job boards) cannot be scraped for listings — v1 scope limited to sources with official APIs/feeds.
-Application quality vs. volume: Tailoring quality may degrade if AI over-optimizes for speed; needs a quick "diff view" so user can sanity-check before sending.
-Duplicate/stale listings: Aggregators often re-list the same job — need company+title fuzzy matching.
-Scope decision needed: Should v2 include the browser-extension autofill for ATS forms (Workday/Greenhouse), or stay purely a tracker + doc generator? This changes engineering complexity significantly.
-12. Suggested Build Order for Replit
-Data model + basic CRUD (profile, job listings, applications) with mock data
-Job aggregation from 1–2 real API sources
-Relevance scoring (simple weighted keyword match)
-Claude API integration for resume/cover letter tailoring
-Review & approve UI + daily goal dashboard
-Application tracker with status pipeline
-Follow-up reminders + duplicate detection
+# Job Pilot ✈
+
+A high-volume job application assistant. Job Pilot aggregates listings from public job APIs, scores them against your profile, uses Gemini to tailor resume bullets and cover letters per job, and gives you a fast review-and-apply workflow with a pipeline tracker — all while keeping the final "Apply" click on the employer's real site (no bot login, no auto-submit).
+
+Built with **Next.js (App Router) · TypeScript · Tailwind CSS · Prisma + Postgres (Neon) · Google Gemini**.
+
+The full product spec lives in [docs/PRD.md](docs/PRD.md).
+
+## Features (v1 / MVP)
+
+- **Job aggregation** — pulls listings from Greenhouse, Lever, and RemoteOK (public APIs only).
+- **Relevance scoring** — deterministic keyword / title / seniority / location / salary match against your profile.
+- **AI resume tailoring** — reorders and rewords your master resume per JD via Gemini (truthful, ATS-oriented).
+- **AI cover letter draft** — short, JD-specific cover letter in your chosen tone.
+- **Review & approve queue** — ranked, navigable cards: read the JD, generate + edit docs, "Approve & Open".
+- **Application tracker** — status pipeline (queued → applied → … → offer/reject), notes, dates, CSV export.
+- **Daily goal dashboard** — progress toward your daily target, funnel counts, and 7-day follow-up reminders.
+- **Duplicate detection** — fuzzy company+title matching so aggregator re-lists don't clutter the queue.
+
+## Getting started
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+Copy the example env and add your Gemini API key:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+GEMINI_API_KEY="your-gemini-api-key-here"
+```
+
+- `DATABASE_URL` — a Postgres connection string. Get one free from [Neon](https://neon.tech), [Supabase](https://supabase.com), or [Vercel Postgres](https://vercel.com/storage/postgres).
+- `GEMINI_API_KEY` — get a key from [Google AI Studio](https://aistudio.google.com/apikey).
+
+`.env` is gitignored — never commit it.
+
+### 3. Set up the database
+
+```bash
+npx prisma migrate deploy   # applies the schema to your Postgres database
+npm run db:seed             # loads a demo profile + a few mock jobs
+```
+
+### 4. Run
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000.
+
+## Usage
+
+1. **Profile** — paste your master resume, target roles, locations, salary floor, excluded companies, and daily goal.
+2. **Dashboard → Refresh jobs** — fetches fresh listings from the public sources and scores them into your queue.
+3. **Review Queue** — for each ranked job: read the JD, click *Generate with AI*, edit the tailored resume/cover letter, then *Approve & Open* to launch the employer's page and log the application.
+4. **Tracker** — update statuses as you hear back; export the log as CSV anytime.
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm run db:seed` | Seed demo data |
+| `npm run db:reset` | Drop, re-migrate, and re-seed the DB |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Architecture
+
+```
+src/
+  app/
+    api/           Route handlers (profile, jobs/refresh, matches/rescore,
+                   queue, tailor, applications, dashboard, export)
+    review/        Review queue page
+    tracker/       Application tracker page
+    profile/       Profile setup page
+    page.tsx       Dashboard
+  components/      NavBar, Dashboard, ReviewQueue, ReviewCard, Tracker, ProfileForm
+  lib/
+    jobSources/    Greenhouse / Lever / RemoteOK fetchers + aggregator
+    ai/            Gemini client + tailoring prompt
+    scoring.ts     Relevance scoring engine
+    dedupe.ts      Fuzzy duplicate detection
+    prisma.ts      Prisma client singleton
+prisma/
+  schema.prisma    User, JobListing, Application, Match models
+  seed.ts          Demo data
+```
+
+## Deploying to Vercel
+
+The app deploys to Vercel as-is — it already uses Postgres, and `npm run postinstall` runs `prisma generate` on every build.
+
+1. Push the repo to GitHub and import it into Vercel.
+2. In **Project Settings → Environment Variables**, add:
+   - `DATABASE_URL` — your Neon/Postgres connection string
+   - `GEMINI_API_KEY` — your Gemini key
+3. Apply migrations to the production database once (from your machine, with the prod `DATABASE_URL`):
+   ```bash
+   npx prisma migrate deploy
+   npm run db:seed   # optional — seeds the demo profile
+   ```
+4. Deploy.
+
+Notes:
+- **`/api/jobs/refresh` fetches 600+ listings** and can exceed the Hobby plan's ~10s function limit. For large refreshes, use a scheduled cron (see the PRD) or a plan with a longer timeout.
+- Neon's **pooled** connection string (the `-pooler` host) is recommended for serverless.
+
+## Notes & scope
+
+- **Single-user MVP.** The app operates on one default profile; auth can be layered on later without schema changes (see the data model in the PRD).
+- **Compliant by design.** Job Pilot never logs into third-party sites or auto-submits. It only opens the real application page for you to complete.
+- **Sources.** Greenhouse/Lever fetch from a few well-known public company boards by default (configurable in `src/lib/jobSources/index.ts`). RemoteOK provides a broad public feed.
