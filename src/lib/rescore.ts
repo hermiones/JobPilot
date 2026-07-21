@@ -21,7 +21,7 @@ const CHUNK_SIZE = 200;
 // this runs several times a day via the IST scheduler / cron, for every user.
 export async function rescoreAndQueue(
   userId: string,
-  threshold = 25
+  threshold = 10
 ): Promise<RescoreResult> {
   const profile = await getProfileById(userId);
   if (!profile) throw new Error(`User ${userId} not found`);

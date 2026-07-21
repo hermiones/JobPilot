@@ -44,6 +44,8 @@ export function ProfileForm() {
   );
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleTimes, setScheduleTimes] = useState<string[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -72,6 +74,30 @@ export function ProfileForm() {
     if (!file) return;
     setResumeFileName(file.name);
     setResumeFileData(await fileToBase64(file));
+
+    // Scoring and AI tailoring only ever read the plain-text field below —
+    // uploading a file alone doesn't feed them anything. Extract the text
+    // server-side and drop it in automatically so that's not a silent trap.
+    setExtracting(true);
+    setExtractError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/profile/resume-text", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setExtractError(data.error ?? "Couldn't extract text from that file.");
+      } else {
+        setMasterResume(data.text);
+      }
+    } catch (err) {
+      setExtractError((err as Error).message);
+    } finally {
+      setExtracting(false);
+    }
   }
 
   async function save() {
@@ -135,7 +161,7 @@ export function ProfileForm() {
         </div>
 
         <div>
-          <label className={label}>Resume file (PDF/DOCX)</label>
+          <label className={label}>Resume file (PDF/DOCX/TXT)</label>
           <div className="flex items-center gap-3">
             <input
               type="file"
@@ -149,10 +175,23 @@ export function ProfileForm() {
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-black/50 dark:text-white/50">
-            Optional — a file you can attach to applications. The AI tailoring uses
-            the text above.
-          </p>
+          {extracting && (
+            <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+              Reading your resume and filling in the text field above…
+            </p>
+          )}
+          {extractError && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+              {extractError}
+            </p>
+          )}
+          {!extracting && !extractError && (
+            <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+              Uploading a file automatically fills the text field above — that&apos;s
+              the only thing scoring and AI tailoring actually read, so double-check
+              it looks right (uploading alone won&apos;t do anything without it).
+            </p>
+          )}
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">

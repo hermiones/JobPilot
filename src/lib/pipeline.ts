@@ -4,7 +4,7 @@ import { rescoreAndQueue } from "@/lib/rescore";
 
 // Refresh the shared job listing pool once, then rescore it for a single user.
 // Used by the manual "Refresh jobs" button (scoped to whoever clicked it).
-export async function runPipelineForUser(userId: string, threshold = 25) {
+export async function runPipelineForUser(userId: string, threshold = 10) {
   const fetchResult = await aggregateJobs();
   const scoreResult = await rescoreAndQueue(userId, threshold);
   return { fetch: fetchResult, score: scoreResult };
@@ -14,7 +14,7 @@ export async function runPipelineForUser(userId: string, threshold = 25) {
 // whose automation schedule is enabled. Used by the IST scheduler and the
 // /api/cron/run endpoint (Vercel Cron), since job listings are shared across
 // all users but matches/applications are per-user.
-export async function runPipelineForScheduledUsers(threshold = 25) {
+export async function runPipelineForScheduledUsers(threshold = 10) {
   const fetchResult = await aggregateJobs();
 
   const users = await prisma.user.findMany({
