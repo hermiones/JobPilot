@@ -1,14 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 
-let client: GoogleGenAI | null = null;
+// Cached per API key so bring-your-own-key users each get their own client
+// without re-instantiating one on every request.
+const clients = new Map<string, GoogleGenAI>();
 
-export function getGemini(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to .env");
+export function getGemini(apiKey?: string): GoogleGenAI {
+  const key = apiKey || process.env.GEMINI_API_KEY;
+  if (!key) {
+    throw new Error("No Gemini API key available. Add one in Profile → API Keys, or set GEMINI_API_KEY.");
   }
+  let client = clients.get(key);
   if (!client) {
-    client = new GoogleGenAI({ apiKey });
+    client = new GoogleGenAI({ apiKey: key });
+    clients.set(key, client);
   }
   return client;
 }

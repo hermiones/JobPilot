@@ -1,4 +1,7 @@
 import { getGemini, GEMINI_MODEL, extractJson } from "./gemini";
+import { generateJsonWithOpenAI } from "./openai";
+import { generateJsonWithAnthropic } from "./anthropic";
+import type { ProviderId } from "./providers";
 
 export type TailorInput = {
   masterResume: string;
@@ -8,6 +11,8 @@ export type TailorInput = {
   company: string;
   jobDescription: string;
   applicantName?: string;
+  provider?: ProviderId;
+  apiKey?: string;
 };
 
 export type TailorResult = {
@@ -22,7 +27,7 @@ const SYSTEM = `You are an expert career coach and resume writer. You tailor a c
 export async function tailorApplication(
   input: TailorInput
 ): Promise<TailorResult> {
-  const ai = getGemini();
+  const provider = input.provider ?? "gemini";
 
   const prompt = `${SYSTEM}
 
@@ -50,16 +55,26 @@ Return ONLY a JSON object with this exact shape:
 }
 Do not include any commentary outside the JSON.`;
 
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: prompt,
-    config: {
-      temperature: 0.6,
-      responseMimeType: "application/json",
-    },
-  });
+  let text: string;
+  if (provider === "openai") {
+    if (!input.apiKey) throw new Error("Add your OpenAI API key in Profile → API Keys.");
+    text = await generateJsonWithOpenAI(prompt, input.apiKey);
+  } else if (provider === "anthropic") {
+    if (!input.apiKey) throw new Error("Add your Anthropic API key in Profile → API Keys.");
+    text = await generateJsonWithAnthropic(prompt, input.apiKey);
+  } else {
+    const ai = getGemini(input.apiKey);
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: prompt,
+      config: {
+        temperature: 0.6,
+        responseMimeType: "application/json",
+      },
+    });
+    text = response.text ?? "";
+  }
 
-  const text = response.text ?? "";
   const parsed = extractJson<TailorResult>(text);
 
   return {

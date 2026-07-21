@@ -32,6 +32,8 @@ model User {
   dailyGoal              Int      @default(50)
   scheduleEnabled        Boolean  @default(false)
   scheduleTimes          String   @default("[]") // JSON array of IST "HH:MM" strings; auto-refresh runs at these times
+  apiKeys                String   @default("[]") // JSON array of { provider, label, key } — bring-your-own AI provider keys
+  preferredProvider      String   @default("gemini") // which apiKeys entry (by provider) to use for tailoring
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

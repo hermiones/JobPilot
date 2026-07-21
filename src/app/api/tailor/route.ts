@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/requireUser";
 import { tailorApplication } from "@/lib/ai/tailor";
+import { isProviderId } from "@/lib/ai/providers";
 
 // POST /api/tailor — generate tailored resume bullets + cover letter for an
 // application via Gemini and persist snapshots. Body: { applicationId, tone? }
@@ -41,6 +42,11 @@ export async function POST(req: Request) {
     profile.coverLetterTemplates.find((t) => t.tone === tone) ??
     profile.coverLetterTemplates[0];
 
+  const provider = isProviderId(profile.preferredProvider)
+    ? profile.preferredProvider
+    : "gemini";
+  const apiKey = profile.apiKeys.find((k) => k.provider === provider)?.key;
+
   try {
     const result = await tailorApplication({
       masterResume: profile.masterResume,
@@ -49,6 +55,8 @@ export async function POST(req: Request) {
       jobTitle: app.jobListing.title,
       company: app.jobListing.company,
       jobDescription: app.jobListing.description,
+      provider,
+      apiKey,
     });
 
     const resumeVersion = result.tailoredBullets.join("\n");
@@ -64,7 +72,7 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json(
-      { error: `Gemini tailoring failed: ${(e as Error).message}` },
+      { error: `AI tailoring failed: ${(e as Error).message}` },
       { status: 502 }
     );
   }

@@ -51,6 +51,8 @@ export type ProfileDTO = {
   dailyGoal: number;
   scheduleEnabled: boolean;
   scheduleTimes: string[];
+  apiKeys: { provider: string; label: string; key: string }[];
+  preferredProvider: string;
 };
 
 export type BoardDTO = {

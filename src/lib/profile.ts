@@ -1,6 +1,7 @@
 import type { User } from "@prisma/client";
 
 export type CoverLetterTemplate = { tone: string; body: string };
+export type ApiKeyEntry = { provider: string; label: string; key: string };
 
 export type ParsedProfile = {
   id: string;
@@ -15,6 +16,8 @@ export type ParsedProfile = {
   dailyGoal: number;
   scheduleEnabled: boolean;
   scheduleTimes: string[];
+  apiKeys: ApiKeyEntry[];
+  preferredProvider: string;
 };
 
 function safeArray<T>(json: string, fallback: T[]): T[] {
@@ -43,5 +46,7 @@ export function parseUser(user: User): ParsedProfile {
     dailyGoal: user.dailyGoal,
     scheduleEnabled: user.scheduleEnabled,
     scheduleTimes: safeArray<string>(user.scheduleTimes, []),
+    apiKeys: safeArray<ApiKeyEntry>(user.apiKeys, []),
+    preferredProvider: user.preferredProvider,
   };
 }

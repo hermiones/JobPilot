@@ -39,6 +39,23 @@ export async function PUT(req: Request) {
     data.masterResumeFileName = body.masterResumeFileName;
   if (typeof body.masterResumeFileData === "string" || body.masterResumeFileData === null)
     data.masterResumeFileData = body.masterResumeFileData;
+  if (Array.isArray(body.apiKeys))
+    data.apiKeys = JSON.stringify(
+      body.apiKeys
+        .filter(
+          (k: unknown): k is { provider: string; label?: string; key: string } =>
+            !!k &&
+            typeof (k as { provider?: unknown }).provider === "string" &&
+            typeof (k as { key?: unknown }).key === "string"
+        )
+        .map((k: { provider: string; label?: string; key: string }) => ({
+          provider: k.provider,
+          label: k.label ?? "",
+          key: k.key,
+        }))
+    );
+  if (typeof body.preferredProvider === "string")
+    data.preferredProvider = body.preferredProvider;
 
   const updated = await prisma.user.update({
     where: { id: profile.id },

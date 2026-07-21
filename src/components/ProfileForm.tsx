@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import type { ProfileDTO } from "@/lib/apiTypes";
 import { BoardsManager } from "@/components/BoardsManager";
+import { AI_PROVIDERS } from "@/lib/ai/providers";
+import { getBg3dEnabled, setBg3dEnabled as persistBg3dPref } from "@/lib/bg3dPref";
 
 function toLines(arr: string[]): string {
   return arr.join("\n");
@@ -46,8 +48,14 @@ export function ProfileForm() {
   const [scheduleTimes, setScheduleTimes] = useState<string[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<
+    { provider: string; label: string; key: string }[]
+  >([]);
+  const [preferredProvider, setPreferredProvider] = useState("gemini");
+  const [bg3dEnabled, setBg3dEnabled] = useState(true);
 
   useEffect(() => {
+    setBg3dEnabled(getBg3dEnabled());
     fetch("/api/profile")
       .then((r) => r.json())
       .then((p: ProfileDTO) => {
@@ -61,6 +69,8 @@ export function ProfileForm() {
         setDailyGoal(String(p.dailyGoal));
         setScheduleEnabled(p.scheduleEnabled);
         setScheduleTimes(p.scheduleTimes.length ? p.scheduleTimes : ["09:00"]);
+        setApiKeys(p.apiKeys);
+        setPreferredProvider(p.preferredProvider || "gemini");
         setTemplates(
           p.coverLetterTemplates.length
             ? p.coverLetterTemplates
@@ -100,6 +110,11 @@ export function ProfileForm() {
     }
   }
 
+  function toggleBg3d(checked: boolean) {
+    setBg3dEnabled(checked);
+    persistBg3dPref(checked);
+  }
+
   async function save() {
     setSaving(true);
     setSaved(false);
@@ -118,6 +133,8 @@ export function ProfileForm() {
         scheduleEnabled,
         scheduleTimes: scheduleTimes.filter((t) => /^\d{2}:\d{2}$/.test(t)),
         coverLetterTemplates: templates.filter((t) => t.tone.trim()),
+        apiKeys: apiKeys.filter((k) => k.key.trim()),
+        preferredProvider,
       }),
     });
     if (res.ok) {
@@ -248,6 +265,127 @@ export function ProfileForm() {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* AI provider / API keys */}
+      <div className={`fade-in-up ${card} space-y-4`} style={{ ["--delay" as string]: "110ms" }}>
+        <div>
+          <h2 className="font-medium">AI provider &amp; API keys</h2>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Bring your own key(s) for resume tailoring. Gemini is recommended
+            and works out of the box even without a key here.
+          </p>
+        </div>
+
+        <div>
+          <label className={label}>Active provider (used for tailoring)</label>
+          <select
+            className={input}
+            value={preferredProvider}
+            onChange={(e) => setPreferredProvider(e.target.value)}
+          >
+            {AI_PROVIDERS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+                {p.recommended ? " — Recommended" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+            {AI_PROVIDERS.find((p) => p.id === preferredProvider)?.hint}
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {apiKeys.map((k, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <select
+                className={`${input} w-auto`}
+                value={k.provider}
+                onChange={(e) =>
+                  setApiKeys((arr) =>
+                    arr.map((x, j) =>
+                      j === i ? { ...x, provider: e.target.value } : x
+                    )
+                  )
+                }
+              >
+                {AI_PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                    {p.recommended ? " ★" : ""}
+                  </option>
+                ))}
+              </select>
+              <input
+                className={`${input} w-auto flex-1 min-w-[10rem]`}
+                placeholder="label (optional, e.g. personal key)"
+                value={k.label}
+                onChange={(e) =>
+                  setApiKeys((arr) =>
+                    arr.map((x, j) =>
+                      j === i ? { ...x, label: e.target.value } : x
+                    )
+                  )
+                }
+              />
+              <input
+                className={`${input} w-auto flex-1 min-w-[14rem] font-mono`}
+                type="password"
+                placeholder="API key"
+                value={k.key}
+                onChange={(e) =>
+                  setApiKeys((arr) =>
+                    arr.map((x, j) =>
+                      j === i ? { ...x, key: e.target.value } : x
+                    )
+                  )
+                }
+              />
+              <button
+                onClick={() =>
+                  setApiKeys((arr) => arr.filter((_, j) => j !== i))
+                }
+                className="text-red-600 text-sm px-1"
+                aria-label="Remove key"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={() =>
+              setApiKeys((arr) => [
+                ...arr,
+                { provider: "gemini", label: "", key: "" },
+              ])
+            }
+            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            + Add API key
+          </button>
+        </div>
+      </div>
+
+      {/* Appearance */}
+      <div className={`fade-in-up ${card}`} style={{ ["--delay" as string]: "115ms" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-medium">Appearance</h2>
+            <p className="text-sm text-black/60 dark:text-white/60">
+              Turn off the floating 3D background for a plain, distraction-free UI.
+            </p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={bg3dEnabled}
+              onChange={(e) => toggleBg3d(e.target.checked)}
+              className="h-4 w-4 accent-indigo-600"
+            />
+            3D background
+          </label>
         </div>
       </div>
 
