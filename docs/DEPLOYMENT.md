@@ -142,20 +142,22 @@ Create `vercel.json` in the project root:
 ```json
 {
   "crons": [
-    { "path": "/api/cron/run", "schedule": "0 */6 * * *" }
+    { "path": "/api/cron/run", "schedule": "30 3 * * *" }
   ]
 }
 ```
 
-This example runs every 6 hours. Vercel Cron schedules always run in UTC.
+Vercel Cron schedules always run in UTC. `30 3 * * *` is 3:30 AM UTC, which is **9:00 AM IST** — a reasonable "morning refresh" time.
+
+> **Hobby plan limit.** Vercel's free Hobby tier allows **at most one cron run per day**, and it only guarantees the run happens sometime within the hour it's scheduled for (not the exact minute). An expression like `0 */6 * * *` (every 6 hours) will be **rejected** on Hobby — you'll see an error like *"Hobby accounts are limited to daily cron jobs."* Stick to one `crons` entry with a daily schedule (`X X * * *`) unless you're on **Vercel Pro**, which unlocks multiple daily runs and exact-time execution — at which point you can add more entries (e.g. `0 9,14,19 * * *` for three fixed UTC hours) to more closely match a user's chosen IST times.
 
 Vercel automatically sends `Authorization: Bearer <value>` on every cron-triggered request, using whatever you've set the `CRON_SECRET` environment variable to — no extra configuration needed beyond setting that variable in step 2. `/api/cron/run` checks the header against it and rejects anything that doesn't match, so the endpoint stays safe even though it's publicly reachable.
 
 `/api/cron/run` refreshes the shared job pool once and then re-scores it for **every user** who has "Automation schedule" turned on in their Profile — so one cron job serves everyone.
 
 > **Note on the two schedulers.** They work differently:
-> - **Local** (`npm run dev`/`npm start`): a timer inside the running process checks every minute and fires exactly at each user's chosen IST times (e.g. 09:00, 14:00, 19:00).
-> - **Vercel**: there's no long-running process to host that timer, so a `vercel.json` cron entry fires on its own fixed interval instead (e.g. every 6 hours) — it ignores each user's specific HH:MM times and just re-runs for everyone with the toggle on, on Vercel's schedule. If you want it closer to specific times, add more `crons` entries (e.g. `0 9,14,19 * * *` for three fixed UTC hours, converting from IST yourself: IST is UTC+5:30).
+> - **Local** (`npm run dev`/`npm start`): a timer inside the running process checks every minute and fires exactly at each user's chosen IST times (e.g. 09:00, 14:00, 19:00) — no plan limits apply since nothing runs through Vercel's cron system.
+> - **Vercel**: there's no long-running process to host that timer, so a `vercel.json` cron entry fires on its own schedule instead — on Hobby, that's once a day, ignoring each user's specific HH:MM times and just re-running for everyone with the toggle on. Upgrade to Pro if you need it closer to multiple specific times per day.
 
 ### 6. Done
 
