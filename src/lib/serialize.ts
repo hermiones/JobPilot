@@ -35,6 +35,7 @@ export function serializeApplication(app: Application) {
     status: app.status,
     resumeVersion: app.resumeVersion,
     coverLetterVersion: app.coverLetterVersion,
+    attachedResumeName: app.attachedResumeName,
     appliedAt: app.appliedAt?.toISOString() ?? null,
     followUpDate: app.followUpDate?.toISOString() ?? null,
     lastUpdated: app.lastUpdated.toISOString(),

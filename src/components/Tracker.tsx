@@ -10,21 +10,33 @@ import {
   type Status,
 } from "@/lib/statusMeta";
 
+type Counts = Record<Status, number>;
+
 export function Tracker() {
   const [items, setItems] = useState<QueueItem[]>([]);
+  const [counts, setCounts] = useState<Counts | null>(null);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Status | "all">("all");
 
-  const load = useCallback(async () => {
-    const res = await fetch("/api/applications");
+  // Filtering happens server-side — with thousands of queued matches possible,
+  // fetching everything into the browser just to filter client-side doesn't scale.
+  const load = useCallback(async (f: Status | "all") => {
+    setLoading(true);
+    const qs = f === "all" ? "" : `?status=${f}`;
+    const res = await fetch(`/api/applications${qs}`);
     const data = await res.json();
     setItems(data.items);
+    setCounts(data.counts);
+    setTotal(data.total);
+    setLimit(data.limit);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(filter);
+  }, [load, filter]);
 
   async function updateStatus(id: string, status: Status) {
     setItems((arr) =>
@@ -39,17 +51,8 @@ export function Tracker() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    load();
+    load(filter);
   }
-
-  if (loading) {
-    return <p className="text-black/60 dark:text-white/60">Loading tracker…</p>;
-  }
-
-  const filtered =
-    filter === "all"
-      ? items
-      : items.filter((x) => x.application.status === filter);
 
   return (
     <div className="space-y-4">
@@ -57,7 +60,7 @@ export function Tracker() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tracker</h1>
           <p className="text-sm text-black/60 dark:text-white/60">
-            {items.length} application{items.length === 1 ? "" : "s"} in your pipeline.
+            {total} application{total === 1 ? "" : "s"} in your pipeline.
           </p>
         </div>
         <a
@@ -70,23 +73,27 @@ export function Tracker() {
 
       <div className="flex flex-wrap gap-1.5">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
-          All ({items.length})
+          All ({total})
         </FilterChip>
-        {STATUS_ORDER.map((s) => {
-          const count = items.filter((x) => x.application.status === s).length;
-          return (
-            <FilterChip
-              key={s}
-              active={filter === s}
-              onClick={() => setFilter(s)}
-            >
-              {STATUS_LABEL[s]} ({count})
-            </FilterChip>
-          );
-        })}
+        {STATUS_ORDER.map((s) => (
+          <FilterChip key={s} active={filter === s} onClick={() => setFilter(s)}>
+            {STATUS_LABEL[s]} ({counts?.[s] ?? 0})
+          </FilterChip>
+        ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {items.length > 0 && total > limit && (
+        <p className="text-xs text-black/50 dark:text-white/50">
+          Showing the {limit} most recently updated of {total} — narrow with a
+          status filter to see more.
+        </p>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-black/60 dark:text-white/60 py-8 text-center">
+          Loading…
+        </p>
+      ) : items.length === 0 ? (
         <p className="text-sm text-black/60 dark:text-white/60 py-8 text-center">
           No applications{filter !== "all" ? ` with status “${STATUS_LABEL[filter]}”` : ""}.
         </p>
@@ -104,7 +111,7 @@ export function Tracker() {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 dark:divide-white/10">
-              {filtered.map(({ application, job }) => (
+              {items.map(({ application, job }) => (
                 <tr key={application.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.03]">
                   <td className="px-4 py-2.5 max-w-xs">
                     <div className="font-medium truncate">{job.title}</div>

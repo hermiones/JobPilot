@@ -1,5 +1,6 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
+import { requireUser } from "@/lib/auth/requireUser";
 
 function csvCell(value: unknown): string {
   const s = value == null ? "" : String(value);
@@ -11,7 +12,9 @@ function csvCell(value: unknown): string {
 
 // GET /api/export — CSV of the full application log.
 export async function GET() {
-  const profile = await getOrCreateDefaultUser();
+  const profile = await requireUser();
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const apps = await prisma.application.findMany({
     where: { userId: profile.id },
     include: { jobListing: true },

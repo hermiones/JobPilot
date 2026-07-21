@@ -1,17 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/review", label: "Review Queue" },
   { href: "/tracker", label: "Tracker" },
   { href: "/profile", label: "Profile" },
+  { href: "/how-to-use", label: "How to Use" },
 ];
+
+const AUTH_PAGES = ["/login", "/register"];
 
 export function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setEmail(d.user?.email ?? null))
+      .catch(() => setEmail(null));
+  }, [pathname]);
+
+  if (AUTH_PAGES.includes(pathname)) return null;
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-10 border-b border-black/10 dark:border-white/10 bg-white/80 dark:bg-black/40 backdrop-blur">
@@ -42,6 +63,21 @@ export function NavBar() {
             );
           })}
         </ul>
+        <div className="ml-auto flex items-center gap-3 text-sm">
+          {email && (
+            <>
+              <span className="text-black/50 dark:text-white/50 hidden sm:inline">
+                {email}
+              </span>
+              <button
+                onClick={logout}
+                className="rounded-md border border-black/10 dark:border-white/15 px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Log out
+              </button>
+            </>
+          )}
+        </div>
       </nav>
     </header>
   );

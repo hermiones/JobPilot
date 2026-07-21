@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
+import { requireUser } from "@/lib/auth/requireUser";
 import { serializeApplication } from "@/lib/serialize";
 
 const VALID_STATUS = [
@@ -24,7 +24,8 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const profile = await getOrCreateDefaultUser();
+  const profile = await requireUser();
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const existing = await prisma.application.findFirst({
     where: { id, userId: profile.id },
@@ -67,7 +68,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const profile = await getOrCreateDefaultUser();
+  const profile = await requireUser();
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const existing = await prisma.application.findFirst({
     where: { id, userId: profile.id },

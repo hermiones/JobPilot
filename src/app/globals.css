@@ -19,8 +19,46 @@
   }
 }
 
-body {
+html {
+  /* Base color sits on <html> so the fixed 3D canvas (a child of <body> at
+     negative z-index) renders above it but behind page content. */
   background: var(--background);
+}
+
+body {
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Smooth, consistent motion for anything interactive across the app. */
+a,
+button,
+input,
+textarea,
+select {
+  transition: color 150ms ease, background-color 150ms ease,
+    border-color 150ms ease, box-shadow 200ms ease, transform 150ms ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+/* Cards (the glassy rounded panels used throughout) lift gently on hover. */
+.card-surface {
+  transition: box-shadow 250ms ease, transform 250ms ease, border-color 250ms ease;
+}
+.card-surface:hover {
+  box-shadow: 0 8px 30px -8px rgba(79, 70, 229, 0.25);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

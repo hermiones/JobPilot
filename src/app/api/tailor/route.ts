@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
+import { requireUser } from "@/lib/auth/requireUser";
 import { tailorApplication } from "@/lib/ai/tailor";
 
 // POST /api/tailor — generate tailored resume bullets + cover letter for an
 // application via Gemini and persist snapshots. Body: { applicationId, tone? }
 export async function POST(req: Request) {
+  const profile = await requireUser();
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json();
   const { applicationId, tone } = body as {
     applicationId?: string;
@@ -18,8 +21,6 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-
-  const profile = await getOrCreateDefaultUser();
 
   const app = await prisma.application.findFirst({
     where: { id: applicationId, userId: profile.id },

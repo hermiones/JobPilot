@@ -1,5 +1,6 @@
 import type { NormalizedJob } from "./types";
 import { stripHtml, truncate } from "./util";
+import { formatINR, usdToInr } from "@/lib/currency";
 
 type RemoteOkJob = {
   id?: string | number;
@@ -29,9 +30,12 @@ export async function fetchRemoteOk(): Promise<NormalizedJob[]> {
   return (data ?? [])
     .filter((j) => j.id && j.position && j.company)
     .map((j) => {
+      // RemoteOK reports USD; convert to INR for a consistent ₹ UI.
       const salary =
         j.salary_min && j.salary_max
-          ? `$${j.salary_min.toLocaleString()} – $${j.salary_max.toLocaleString()}`
+          ? `${formatINR(usdToInr(j.salary_min))} – ${formatINR(
+              usdToInr(j.salary_max)
+            )}`
           : null;
       const desc = stripHtml(j.description ?? "");
       const tags = j.tags?.length ? ` Tags: ${j.tags.join(", ")}.` : "";

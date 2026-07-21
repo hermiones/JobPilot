@@ -20,18 +20,38 @@ enum ApplicationStatus {
 model User {
   id                     String   @id @default(cuid())
   email                  String   @unique
+  passwordHash           String // bcrypt hash — see src/lib/auth/password.ts
   masterResume           String // free-text resume content used as the base for tailoring
+  masterResumeFileName   String? // optional uploaded resume file name
+  masterResumeFileData   String? // optional uploaded resume, base64-encoded
   coverLetterTemplates   String // JSON array of { tone: string, body: string }
   targetRoles            String // JSON array of strings
   targetLocations        String // JSON array of strings
-  salaryFloor            Int?
+  salaryFloor            Int? // in INR
   excludedCompanies      String // JSON array of strings
   dailyGoal              Int      @default(50)
+  scheduleEnabled        Boolean  @default(false)
+  scheduleTimes          String   @default("[]") // JSON array of IST "HH:MM" strings; auto-refresh runs at these times
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
   applications Application[]
   matches      Match[]
+}
+
+// A discovered/verified public job board (Greenhouse token or Lever handle)
+// that the aggregator pulls from. Populated by auto-discovery probing.
+model Board {
+  id           String   @id @default(cuid())
+  source       String // greenhouse | lever
+  slug         String // company token / handle
+  label        String? // human-friendly company name
+  active       Boolean  @default(true)
+  lastJobCount Int      @default(0)
+  lastCheckedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@unique([source, slug])
 }
 
 model JobListing {
@@ -61,6 +81,8 @@ model Application {
   status           ApplicationStatus @default(queued)
   resumeVersion    String? // tailored resume text snapshot used for this application
   coverLetterVersion String? // tailored cover letter text snapshot used for this application
+  attachedResumeName String? // file name of a resume attached to this specific application
+  attachedResumeData String? // attached resume, base64-encoded
   appliedAt        DateTime?
   lastUpdated      DateTime          @updatedAt
   notes            String?

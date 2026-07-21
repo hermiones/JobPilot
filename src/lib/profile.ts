@@ -6,12 +6,15 @@ export type ParsedProfile = {
   id: string;
   email: string;
   masterResume: string;
+  masterResumeFileName: string | null;
   coverLetterTemplates: CoverLetterTemplate[];
   targetRoles: string[];
   targetLocations: string[];
   salaryFloor: number | null;
   excludedCompanies: string[];
   dailyGoal: number;
+  scheduleEnabled: boolean;
+  scheduleTimes: string[];
 };
 
 function safeArray<T>(json: string, fallback: T[]): T[] {
@@ -28,6 +31,7 @@ export function parseUser(user: User): ParsedProfile {
     id: user.id,
     email: user.email,
     masterResume: user.masterResume,
+    masterResumeFileName: user.masterResumeFileName,
     coverLetterTemplates: safeArray<CoverLetterTemplate>(
       user.coverLetterTemplates,
       []
@@ -37,5 +41,7 @@ export function parseUser(user: User): ParsedProfile {
     salaryFloor: user.salaryFloor,
     excludedCompanies: safeArray<string>(user.excludedCompanies, []),
     dailyGoal: user.dailyGoal,
+    scheduleEnabled: user.scheduleEnabled,
+    scheduleTimes: safeArray<string>(user.scheduleTimes, []),
   };
 }

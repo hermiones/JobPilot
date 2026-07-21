@@ -24,6 +24,7 @@ export type ApplicationDTO = {
   status: Status;
   resumeVersion: string | null;
   coverLetterVersion: string | null;
+  attachedResumeName: string | null;
   appliedAt: string | null;
   followUpDate: string | null;
   lastUpdated: string;
@@ -41,12 +42,24 @@ export type ProfileDTO = {
   id: string;
   email: string;
   masterResume: string;
+  masterResumeFileName: string | null;
   coverLetterTemplates: { tone: string; body: string }[];
   targetRoles: string[];
   targetLocations: string[];
   salaryFloor: number | null;
   excludedCompanies: string[];
   dailyGoal: number;
+  scheduleEnabled: boolean;
+  scheduleTimes: string[];
+};
+
+export type BoardDTO = {
+  id: string;
+  source: string;
+  slug: string;
+  label: string | null;
+  active: boolean;
+  lastJobCount: number;
 };
 
 export type TailorResult = {
@@ -67,4 +80,7 @@ export type DashboardData = {
     followUpDate: string | null;
     appliedAt: string | null;
   }[];
+  scheduleEnabled: boolean;
+  scheduleTimes: string[];
+  nextRun: string | null;
 };

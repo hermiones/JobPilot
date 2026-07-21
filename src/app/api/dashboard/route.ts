@@ -1,50 +1,52 @@
 import { NextResponse } from "next/server";
-import { startOfDay, isBefore } from "date-fns";
+import { startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
+import { requireUser } from "@/lib/auth/requireUser";
 import { serializeJob } from "@/lib/serialize";
+import { nextRunLabel } from "@/lib/ist";
+import { STATUS_ORDER, type Status } from "@/lib/statusMeta";
 
 // GET /api/dashboard — daily goal progress, status funnel, and follow-up nudges.
+// Uses aggregate counts rather than fetching every application row — the
+// pipeline can queue thousands of listings, and pulling them all (with joined
+// job descriptions) into JSON on every dashboard load doesn't scale.
 export async function GET() {
-  const profile = await getOrCreateDefaultUser();
+  const profile = await requireUser();
+  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const apps = await prisma.application.findMany({
+  const grouped = await prisma.application.groupBy({
+    by: ["status"],
     where: { userId: profile.id },
-    include: { jobListing: true },
+    _count: { _all: true },
   });
 
+  const funnel = Object.fromEntries(
+    STATUS_ORDER.map((s) => [s, 0])
+  ) as Record<Status, number>;
+  for (const g of grouped) funnel[g.status] = g._count._all;
+
   const todayStart = startOfDay(new Date());
-  const appliedToday = apps.filter(
-    (a) => a.appliedAt && !isBefore(a.appliedAt, todayStart)
-  ).length;
+  const appliedToday = await prisma.application.count({
+    where: { userId: profile.id, appliedAt: { gte: todayStart } },
+  });
 
-  const funnel = {
-    queued: 0,
-    approved: 0,
-    applied: 0,
-    responded: 0,
-    interview: 0,
-    rejected: 0,
-    offer: 0,
-  };
-  for (const a of apps) funnel[a.status] += 1;
+  const dueFollowUps = await prisma.application.findMany({
+    where: {
+      userId: profile.id,
+      status: "applied",
+      followUpDate: { lte: new Date() },
+    },
+    include: { jobListing: true },
+    orderBy: { followUpDate: "asc" },
+    take: 50,
+  });
+  const followUps = dueFollowUps.map((a) => ({
+    applicationId: a.id,
+    job: serializeJob(a.jobListing),
+    followUpDate: a.followUpDate?.toISOString() ?? null,
+    appliedAt: a.appliedAt?.toISOString() ?? null,
+  }));
 
-  const now = new Date();
-  const followUps = apps
-    .filter(
-      (a) =>
-        a.status === "applied" &&
-        a.followUpDate &&
-        !isBefore(now, a.followUpDate) // followUpDate <= now
-    )
-    .map((a) => ({
-      applicationId: a.id,
-      job: serializeJob(a.jobListing),
-      followUpDate: a.followUpDate?.toISOString() ?? null,
-      appliedAt: a.appliedAt?.toISOString() ?? null,
-    }));
-
-  // Applied but not yet responded/interview/rejected/offer, funnel-wise.
   const totalApplied =
     funnel.applied +
     funnel.responded +
@@ -58,5 +60,10 @@ export async function GET() {
     totalApplied,
     funnel,
     followUps,
+    scheduleEnabled: profile.scheduleEnabled,
+    scheduleTimes: profile.scheduleTimes,
+    nextRun: profile.scheduleEnabled
+      ? nextRunLabel(profile.scheduleTimes)
+      : null,
   });
 }

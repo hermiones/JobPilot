@@ -87,8 +87,22 @@ export function Dashboard() {
         </div>
       )}
 
+      <div className="text-sm text-black/60 dark:text-white/60">
+        {data.scheduleEnabled ? (
+          <>
+            🕒 Auto-refresh <span className="font-medium text-green-600 dark:text-green-400">on</span>
+            {data.scheduleTimes.length > 0 && (
+              <> at {data.scheduleTimes.join(", ")} IST</>
+            )}
+            {data.nextRun && <> · next run {data.nextRun}</>}
+          </>
+        ) : (
+          <>🕒 Auto-refresh off — enable it in <a href="/profile" className="text-indigo-600 dark:text-indigo-400 hover:underline">Profile</a>.</>
+        )}
+      </div>
+
       {/* Daily goal */}
-      <section className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 p-5">
+      <section className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
         <div className="flex items-baseline justify-between">
           <h2 className="font-medium">Today&apos;s goal</h2>
           <span className="text-sm text-black/60 dark:text-white/60">
@@ -109,7 +123,7 @@ export function Dashboard() {
       </section>
 
       {/* Funnel */}
-      <section className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 p-5">
+      <section className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
         <h2 className="font-medium mb-3">Pipeline funnel</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {STATUS_ORDER.map((s) => (
@@ -129,7 +143,7 @@ export function Dashboard() {
       </section>
 
       {/* Follow-ups */}
-      <section className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 p-5">
+      <section className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Follow-up reminders</h2>
           {data.followUps.length > 0 && (

@@ -35,6 +35,27 @@ export function ReviewCard({
     application.coverLetterVersion ?? ""
   );
   const [busy, setBusy] = useState(false);
+  const [resumeName, setResumeName] = useState<string | null>(
+    application.attachedResumeName
+  );
+  const [uploading, setUploading] = useState(false);
+
+  async function attachResume(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/applications/${application.id}/resume`, {
+      method: "POST",
+      body: form,
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setResumeName(data.attachedResumeName);
+    }
+    setUploading(false);
+  }
 
   async function tailor() {
     setTailoring(true);
@@ -90,13 +111,13 @@ export function ReviewCard({
   }
 
   const inputClass =
-    "w-full rounded-md border border-black/15 dark:border-white/15 bg-white dark:bg-white/5 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500";
+    "w-full rounded-md border border-black/15 dark:border-white/15 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500";
 
   const displayBullets =
     bullets || (result ? result.tailoredBullets.join("\n") : "");
 
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
+    <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md overflow-hidden">
       {/* Header */}
       <div className="p-5 border-b border-black/5 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
@@ -230,6 +251,28 @@ export function ReviewCard({
             </>
           )}
         </div>
+      </div>
+
+      {/* Resume attachment */}
+      <div className="px-4 py-3 border-t border-black/5 dark:border-white/10 flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium">Resume for this job:</span>
+        <label className="cursor-pointer rounded-md border border-black/15 dark:border-white/15 px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10">
+          {uploading ? "Uploading…" : resumeName ? "Replace file" : "Attach file"}
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.txt"
+            onChange={attachResume}
+            className="hidden"
+          />
+        </label>
+        {resumeName && (
+          <a
+            href={`/api/applications/${application.id}/resume`}
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            📎 {resumeName}
+          </a>
+        )}
       </div>
 
       {/* Actions */}

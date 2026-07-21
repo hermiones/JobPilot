@@ -14,6 +14,9 @@ build
 prisma/*.db
 prisma/*.db-journal
 
+# vercel
+.vercel
+
 # misc
 .DS_Store
 *.log
