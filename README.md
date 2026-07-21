@@ -1,102 +1,91 @@
-PRD: JobBlast — High-Volume Job Application Assistant
-1. Summary
-JobBlast helps a job seeker apply to ~50 relevant jobs/day by combining job aggregation, AI-tailored resume/cover-letter generation, and a fast review-and-submit workflow — without violating job board terms of service or spamming employers with generic copies.
-Core assumption (please confirm/adjust): This is a semi-automated tool. The app never logs into LinkedIn/Indeed on the user's behalf or auto-submits without a human click. It automates the slow parts (finding jobs, tailoring documents, tracking status) and leaves a single "Apply" click per job so submission stays compliant and the user stays in control.
-2. Problem Statement
-Manually applying to 50 jobs/day is impossible because each application requires: finding the listing, reading the JD, tailoring a resume/cover letter, filling the form, and tracking status. Job seekers either burn hours per application or spam identical resumes that get filtered by ATS keyword matching.
-3. Goals
-Cut time-per-application from ~15 min to <2 min
-Maintain per-job tailoring (keywords, tone) to survive ATS screening
-Track every application's status in one place (no spreadsheet)
-Surface only relevant, non-duplicate, non-expired listings
-Non-Goals (v1)
-No fully unattended auto-submit / bot login to third-party sites
-No email/LinkedIn scraping that violates platform ToS
-No guarantee of interview/offer outcomes
-4. Target User
-Active job seeker doing a high-volume search (e.g., post-layoff, career switch, new grad) applying across multiple platforms daily.
-5. Core User Flow
-User sets up profile once: master resume, 2–3 cover letter tones, target roles, locations, salary floor, excluded companies.
-App pulls new matching listings daily from job board APIs / RSS feeds.
-For each listing, app scores relevance (keyword + title + seniority match) and shows a ranked queue.
-User taps a card → sees JD + AI-tailored resume bullets + AI-drafted cover letter (editable).
-User clicks "Approve & Open" → app opens the job's real application page in a new tab with the tailored resume/cover letter ready to paste/upload; user does the final click on the employer's site.
-App logs the application (company, role, date, documents used, status = Applied).
-Dashboard shows daily count toward the 50/day goal, funnel (Applied → Response → Interview → Offer/Reject), and follow-up reminders (e.g., nudge at day 7 with no response).
-6. Feature List (v1 / MVP)
-Feature
-Description
-Priority
-Job aggregation
-Pull listings via official APIs/RSS (e.g., Greenhouse, Lever, RemoteOK, Adzuna API) — no scraping sites that forbid it
-P0
-Relevance scoring
-Simple keyword/title/seniority match against user profile
-P0
-AI resume tailoring
-Rewrite bullet order/wording per JD using an LLM, from one master resume
-P0
-AI cover letter draft
-Generate short, JD-specific cover letter from template + user tone
-P0
-Review & approve UI
-Fast keyboard-driven review screen (swipe/approve/skip)
-P0
-Application tracker
-Status pipeline, notes, dates, document version used
-P0
-Daily goal dashboard
-Progress bar toward daily target, streaks
-P1
-Follow-up reminders
-Auto-flag applications with no response after N days
-P1
-Duplicate detection
-Prevent re-applying to same company/role
-P1
-Export
-CSV export of application log
-P2
-Browser extension
-Autofill helper for ATS forms (Workday, Greenhouse) using stored profile data — user still clicks submit
-P2
-7. Data Model (high-level)
-User
- - id, email, master_resume, cover_letter_templates[], target_roles[], target_locations[], salary_floor, excluded_companies[]
-JobListing
- - id, source, title, company, location, url, description, posted_date, salary_range, fetched_at
-Application
- - id, user_id, job_listing_id, status (queued|approved|applied|responded|interview|rejected|offer)
- - resume_version, cover_letter_version, applied_at, last_updated, notes, follow_up_date
-Match
- - id, user_id, job_listing_id, relevance_score, reasons[]
-8. Tech Stack (Replit-friendly)
-Frontend: React + Tailwind CSS (single-page dashboard + review queue)
-Backend: Node.js/Express or Next.js API routes
-Database: Replit DB or Postgres (Supabase/Neon) for structured data
-AI: Anthropic API (Claude) for resume tailoring + cover letter generation
-Job data sources: Public/official APIs only — Greenhouse Job Board API, Lever Postings API, RemoteOK API, Adzuna API (all allow programmatic access)
-Auth: Simple email/password or magic link (single-user tool, no need for OAuth complexity in v1)
-Scheduling: Cron job (daily) to refresh listings
-9. Non-Functional Requirements
-Daily job fetch completes in <2 min for ~500 listings scanned
-AI tailoring response <10 sec per job
-All third-party API calls respect rate limits and published ToS
-User's resume/personal data never sent to third parties beyond the LLM call itself
-10. Success Metrics
-Median time per application ≤ 2 minutes
-≥40 applications/day sustained by an active user
-≥30% of listings shown are marked "relevant" by user (proxy for scoring quality)
-11. Risks / Open Questions
-ToS risk: Any job board without a public API (most consumer job boards) cannot be scraped for listings — v1 scope limited to sources with official APIs/feeds.
-Application quality vs. volume: Tailoring quality may degrade if AI over-optimizes for speed; needs a quick "diff view" so user can sanity-check before sending.
-Duplicate/stale listings: Aggregators often re-list the same job — need company+title fuzzy matching.
-Scope decision needed: Should v2 include the browser-extension autofill for ATS forms (Workday/Greenhouse), or stay purely a tracker + doc generator? This changes engineering complexity significantly.
-12. Suggested Build Order for Replit
-Data model + basic CRUD (profile, job listings, applications) with mock data
-Job aggregation from 1–2 real API sources
-Relevance scoring (simple weighted keyword match)
-Claude API integration for resume/cover letter tailoring
-Review & approve UI + daily goal dashboard
-Application tracker with status pipeline
-Follow-up reminders + duplicate detection
+# Job Pilot ✈
+
+A high-volume job application assistant. Job Pilot aggregates listings from public job APIs, scores them against your profile, uses Gemini to tailor resume bullets and cover letters per job, and gives you a fast review-and-apply workflow with a pipeline tracker — all while keeping the final "Apply" click on the employer's real site (no bot login, no auto-submit).
+
+Built with **Next.js (App Router) · TypeScript · Tailwind CSS · Prisma + Postgres (Neon) · Google Gemini**. Multi-user with email/password login — everyone gets their own private profile, queue, and tracker.
+
+📄 The full product spec lives in [docs/PRD.md](docs/PRD.md).
+🛠️ Setting it up? See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for local + Vercel instructions.
+🧭 New to the codebase? [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) explains every moving part in plain English.
+
+## Features (v1 / MVP)
+
+- **Multi-user accounts** — email/password registration and login; every user's resume, matches, and applications are private to them.
+- **Job aggregation** — pulls listings from Greenhouse, Lever, and RemoteOK (public APIs only), with **auto-discovery** to find live company boards by name.
+- **Relevance scoring** — deterministic keyword / title / seniority / location / salary match against your profile (salaries in ₹ INR).
+- **AI resume tailoring** — reorders and rewords your master resume per JD via Gemini (truthful, ATS-oriented).
+- **AI cover letter draft** — short, JD-specific cover letter in your chosen tone.
+- **Review & approve queue** — ranked, navigable cards: read the JD, generate + edit docs, attach a resume file, "Approve & Open".
+- **Application tracker** — status pipeline (queued → applied → … → offer/reject), notes, dates, CSV export.
+- **Daily goal dashboard** — progress toward your daily target, funnel counts, and 7-day follow-up reminders.
+- **Automation schedule** — pick IST times to auto-refresh and re-score jobs, several times a day, with no manual clicks.
+- **Duplicate detection** — fuzzy company+title matching so aggregator re-lists don't clutter the queue.
+
+## Quick start
+
+```bash
+npm install
+cp .env.example .env   # fill in DATABASE_URL, GEMINI_API_KEY, AUTH_SECRET
+npx prisma migrate deploy
+npm run db:seed         # optional demo account: you@jobpilot.local / jobpilot123
+npm run dev
+```
+
+Open http://localhost:3000 — you'll land on `/login`. Log in with the seeded demo account or register your own. Full details (including generating `AUTH_SECRET`, choosing a Postgres provider, and deploying to Vercel) are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Usage
+
+1. **Register / Log in** — each account is private; your data never mixes with anyone else's.
+2. **Profile** — paste your master resume, target roles, locations, salary floor (₹), excluded companies, daily goal, and (optionally) an automation schedule.
+3. **Job boards** — auto-discover public Greenhouse/Lever company boards, or add specific companies by name.
+4. **Dashboard → Refresh jobs** — fetches fresh listings from the public sources and scores them into your queue (or let the schedule do it automatically).
+5. **Review Queue** — for each ranked job: read the JD, click *Generate with AI*, edit the tailored resume/cover letter, optionally attach a resume file, then *Approve & Open* to launch the employer's page and log the application.
+6. **Tracker** — update statuses as you hear back; export the log as CSV anytime.
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the dev server |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm run db:seed` | Seed demo data |
+| `npm run db:reset` | Drop, re-migrate, and re-seed the DB |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Architecture
+
+```
+src/
+  app/
+    api/           Route handlers (auth, profile, jobs/refresh, matches/rescore,
+                   queue, tailor, applications, dashboard, export, boards, cron)
+    login/ register/  Auth pages
+    review/        Review queue page
+    tracker/       Application tracker page
+    profile/       Profile setup page (resume, schedule, job boards)
+    page.tsx       Dashboard
+  components/      NavBar, Dashboard, ReviewQueue, ReviewCard, Tracker,
+                   ProfileForm, BoardsManager, AuthForm, Background3D
+  lib/
+    auth/          Password hashing, session cookies, requireUser guard
+    jobSources/    Greenhouse / Lever / RemoteOK fetchers, aggregator, discovery
+    ai/            Gemini client + tailoring prompt
+    scoring.ts     Relevance scoring engine
+    dedupe.ts      Fuzzy duplicate detection
+    rescore.ts     Batched scoring + queueing (per user)
+    pipeline.ts    Refresh + rescore orchestration (manual and scheduled)
+    scheduler.ts   In-process IST scheduler (local/self-hosted runs)
+    prisma.ts      Prisma client singleton
+  proxy.ts         Next.js middleware — protects pages/APIs behind login
+prisma/
+  schema.prisma    User, JobListing, Application, Match, Board models
+  seed.ts          Demo data
+```
+
+For a plain-language walkthrough of how each piece works — where jobs come from, how scoring works, how the AI tailoring prompt is built, how the scheduler and login system work — see [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
+
+## Notes & scope
+
+- **Multi-user, shared job pool.** Job listings (`JobListing`, `Board`) are shared across everyone — they're public postings. Profiles, matches, and applications are private per account.
+- **Compliant by design.** Job Pilot never logs into third-party sites or auto-submits. It only opens the real application page for you to complete.
+- **Currency.** All salary figures are shown in ₹ INR; RemoteOK's USD figures are converted at a fixed reference rate (see `src/lib/currency.ts`).

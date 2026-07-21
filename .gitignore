@@ -1,0 +1,27 @@
+# dependencies
+node_modules
+
+# next.js
+.next
+out
+build
+
+# env files (never commit secrets)
+.env
+.env*.local
+
+# prisma / sqlite
+prisma/*.db
+prisma/*.db-journal
+
+# vercel
+.vercel
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
