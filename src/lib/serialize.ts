@@ -1,4 +1,4 @@
-import type { Application, JobListing, Match } from "@prisma/client";
+import type { Application, ApplicationVariant, JobListing, Match } from "@prisma/client";
 
 export function serializeJob(job: JobListing) {
   return {
@@ -41,5 +41,17 @@ export function serializeApplication(app: Application) {
     lastUpdated: app.lastUpdated.toISOString(),
     createdAt: app.createdAt.toISOString(),
     notes: app.notes,
+    selectedVariantId: app.selectedVariantId,
+  };
+}
+
+export function serializeVariant(v: ApplicationVariant) {
+  return {
+    id: v.id,
+    label: v.label,
+    tone: v.tone,
+    resumeVersion: v.resumeVersion,
+    coverLetterVersion: v.coverLetterVersion,
+    createdAt: v.createdAt.toISOString(),
   };
 }

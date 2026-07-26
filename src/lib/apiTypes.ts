@@ -30,6 +30,7 @@ export type ApplicationDTO = {
   lastUpdated: string;
   createdAt: string;
   notes: string | null;
+  selectedVariantId: string | null;
 };
 
 export type QueueItem = {
@@ -53,6 +54,65 @@ export type ProfileDTO = {
   scheduleTimes: string[];
   apiKeys: { provider: string; label: string; key: string }[];
   preferredProvider: string;
+  plan: string;
+  referralCode: string;
+  autoApproveEnabled: boolean;
+  autoApproveMinScore: number;
+  autoApproveMaxPerRun: number;
+  isAdmin: boolean;
+  createdAt: string;
+  codingProfiles: { platform: string; url: string }[];
+  gmailConnected: boolean;
+  gmailEmail: string | null;
+  gmailLastSyncedAt: string | null;
+};
+
+export type ReferralDTO = {
+  code: string;
+  count: number;
+  goal: number;
+  plan: string;
+};
+
+export type ApplicationVariantDTO = {
+  id: string;
+  label: string;
+  tone: string | null;
+  resumeVersion: string;
+  coverLetterVersion: string;
+  createdAt: string;
+};
+
+export type VariantAnalyticsEntry = {
+  label: string;
+  applied: number;
+  responded: number;
+  responseRate: number;
+};
+
+export type FeedbackEntry = {
+  id: string;
+  email: string;
+  rating: number | null;
+  message: string;
+  page: string | null;
+  createdAt: string;
+};
+
+export type AdminInsights = {
+  totalUsers: number;
+  planCounts: Record<string, number>;
+  signupTrend: { date: string; count: number }[];
+  totalApplications: number;
+  appliedToday: number;
+  funnel: Record<Status, number>;
+  totalJobListings: number;
+  totalBoards: number;
+  activeBoards: number;
+  topCompanies: { company: string; count: number }[];
+  referral: { referredSignups: number; proViaReferral: number };
+  variantPerformance: VariantAnalyticsEntry[];
+  providerDistribution: { provider: string; count: number }[];
 };
 
 export type BoardDTO = {
@@ -65,7 +125,6 @@ export type BoardDTO = {
 };
 
 export type TailorResult = {
-  tailoredBullets: string[];
   matchedKeywords: string[];
   coverLetter: string;
   summary: string;
@@ -85,4 +144,8 @@ export type DashboardData = {
   scheduleEnabled: boolean;
   scheduleTimes: string[];
   nextRun: string | null;
+  daysSinceStart: number;
+  weeklyApplied: number;
+  communityAvgWeekly: number;
+  streakDays: number;
 };

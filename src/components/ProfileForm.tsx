@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { ProfileDTO } from "@/lib/apiTypes";
-import { BoardsManager } from "@/components/BoardsManager";
 import { AI_PROVIDERS } from "@/lib/ai/providers";
 import { getBg3dEnabled, setBg3dEnabled as persistBg3dPref } from "@/lib/bg3dPref";
+import { maxScheduleTimes } from "@/lib/plan";
+import { ReferralCard } from "@/components/ReferralCard";
+import { GmailCard } from "@/components/GmailCard";
 
 function toLines(arr: string[]): string {
   return arr.join("\n");
@@ -53,6 +55,14 @@ export function ProfileForm() {
   >([]);
   const [preferredProvider, setPreferredProvider] = useState("gemini");
   const [bg3dEnabled, setBg3dEnabled] = useState(true);
+  const [plan, setPlan] = useState("free");
+  const [codingProfiles, setCodingProfiles] = useState<
+    { platform: string; url: string }[]
+  >([]);
+  const [planSaving, setPlanSaving] = useState(false);
+  const [autoApproveEnabled, setAutoApproveEnabled] = useState(false);
+  const [autoApproveMinScore, setAutoApproveMinScore] = useState("50");
+  const [autoApproveMaxPerRun, setAutoApproveMaxPerRun] = useState("20");
 
   useEffect(() => {
     setBg3dEnabled(getBg3dEnabled());
@@ -71,6 +81,11 @@ export function ProfileForm() {
         setScheduleTimes(p.scheduleTimes.length ? p.scheduleTimes : ["09:00"]);
         setApiKeys(p.apiKeys);
         setPreferredProvider(p.preferredProvider || "gemini");
+        setPlan(p.plan || "free");
+        setAutoApproveEnabled(p.autoApproveEnabled);
+        setAutoApproveMinScore(String(p.autoApproveMinScore));
+        setAutoApproveMaxPerRun(String(p.autoApproveMaxPerRun));
+        setCodingProfiles(p.codingProfiles);
         setTemplates(
           p.coverLetterTemplates.length
             ? p.coverLetterTemplates
@@ -115,6 +130,17 @@ export function ProfileForm() {
     persistBg3dPref(checked);
   }
 
+  async function switchPlan(next: string) {
+    setPlan(next);
+    setPlanSaving(true);
+    await fetch("/api/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: next }),
+    });
+    setPlanSaving(false);
+  }
+
   async function save() {
     setSaving(true);
     setSaved(false);
@@ -135,6 +161,10 @@ export function ProfileForm() {
         coverLetterTemplates: templates.filter((t) => t.tone.trim()),
         apiKeys: apiKeys.filter((k) => k.key.trim()),
         preferredProvider,
+        autoApproveEnabled,
+        autoApproveMinScore: parseInt(autoApproveMinScore, 10) || 50,
+        autoApproveMaxPerRun: parseInt(autoApproveMaxPerRun, 10) || 20,
+        codingProfiles: codingProfiles.filter((c) => c.url.trim()),
       }),
     });
     if (res.ok) {
@@ -163,6 +193,147 @@ export function ProfileForm() {
         <p className="text-sm text-black/60 dark:text-white/60">
           Set it once — everything downstream (matching, tailoring, scheduling) runs off this.
         </p>
+      </div>
+
+      {/* Account */}
+      <div className={`fade-in-up ${card} flex flex-wrap items-center justify-between gap-3`} style={{ ["--delay" as string]: "20ms" }}>
+        <div className="min-w-0">
+          <p className="font-medium truncate">{profile.email}</p>
+          <p className="text-xs text-black/50 dark:text-white/50">
+            Member since{" "}
+            {new Date(profile.createdAt).toLocaleDateString(undefined, {
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {profile.isAdmin && (
+            <a
+              href="/admin"
+              className="rounded-full bg-black/80 dark:bg-white/20 text-white px-2.5 py-1 text-xs font-semibold hover:brightness-110 transition-all"
+            >
+              🛡️ Admin
+            </a>
+          )}
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              plan === "pro"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white"
+                : "bg-black/10 dark:bg-white/10 text-black/70 dark:text-white/70"
+            }`}
+          >
+            {plan === "pro" ? "✨ Pro user" : "Free user"}
+          </span>
+        </div>
+      </div>
+
+      {/* Plan */}
+      <div
+        className={`fade-in-up ${card} flex flex-wrap items-center justify-between gap-3 transition-all duration-300`}
+        style={{ ["--delay" as string]: "40ms" }}
+      >
+        <div>
+          <h2 className="font-medium flex items-center gap-2">
+            Plan
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-300 ${
+                plan === "pro"
+                  ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white"
+                  : "bg-black/10 dark:bg-white/10 text-black/70 dark:text-white/70"
+              }`}
+            >
+              {plan === "pro" ? "✨ Pro" : "Free"}
+            </span>
+          </h2>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Pro unlocks up to 3 different cover letters per job (so you can see which style gets more replies), smarter/higher-quality AI writing, and up to 8 auto-apply times per day.
+            {plan === "free"
+              ? " (Demo toggle for now — billing isn't wired up yet.)"
+              : ""}
+          </p>
+        </div>
+        <div className="flex rounded-md border border-black/15 dark:border-white/15 overflow-hidden text-sm">
+          <button
+            onClick={() => switchPlan("free")}
+            disabled={planSaving}
+            className={`px-3 py-1.5 font-medium transition-colors duration-200 ${
+              plan === "free"
+                ? "bg-black/10 dark:bg-white/15"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            Free
+          </button>
+          <button
+            onClick={() => switchPlan("pro")}
+            disabled={planSaving}
+            className={`px-3 py-1.5 font-medium transition-colors duration-200 ${
+              plan === "pro"
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white"
+                : "hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            Pro
+          </button>
+        </div>
+      </div>
+
+      <ReferralCard />
+
+      <GmailCard profile={profile} />
+
+      {/* Coding profile links */}
+      <div className={`fade-in-up ${card} space-y-3`} style={{ ["--delay" as string]: "70ms" }}>
+        <div>
+          <h2 className="font-medium">Coding profile</h2>
+          <p className="text-sm text-black/60 dark:text-white/60">
+            Link your LeetCode, GitHub, or other competitive-coding profiles. Not shown
+            to anyone yet (there&apos;s no recruiter-facing side of the app), but they&apos;ll
+            be ready to show once that exists.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {codingProfiles.map((c, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <input
+                className={`${input} w-auto max-w-[10rem]`}
+                placeholder="platform (e.g. LeetCode)"
+                value={c.platform}
+                onChange={(e) =>
+                  setCodingProfiles((arr) =>
+                    arr.map((x, j) => (j === i ? { ...x, platform: e.target.value } : x))
+                  )
+                }
+              />
+              <input
+                className={`${input} w-auto flex-1 min-w-[14rem]`}
+                placeholder="https://leetcode.com/u/yourname"
+                value={c.url}
+                onChange={(e) =>
+                  setCodingProfiles((arr) =>
+                    arr.map((x, j) => (j === i ? { ...x, url: e.target.value } : x))
+                  )
+                }
+              />
+              <button
+                onClick={() => setCodingProfiles((arr) => arr.filter((_, j) => j !== i))}
+                className="text-red-600 text-sm px-1 transition-transform duration-150 hover:scale-125"
+                aria-label="Remove"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {codingProfiles.length < 10 && (
+            <button
+              onClick={() => setCodingProfiles((arr) => [...arr, { platform: "", url: "" }])}
+              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline transition-transform duration-150 hover:translate-x-0.5"
+            >
+              + Add profile link
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={`fade-in-up ${card} space-y-4`} style={{ ["--delay" as string]: "80ms" }}>
@@ -298,62 +469,83 @@ export function ProfileForm() {
         </div>
 
         <div className="space-y-3">
-          {apiKeys.map((k, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-2">
-              <select
-                className={`${input} w-auto`}
-                value={k.provider}
-                onChange={(e) =>
-                  setApiKeys((arr) =>
-                    arr.map((x, j) =>
-                      j === i ? { ...x, provider: e.target.value } : x
-                    )
-                  )
-                }
+          {apiKeys.map((k, i) => {
+            const providerInfo = AI_PROVIDERS.find((p) => p.id === k.provider);
+            return (
+              <div
+                key={i}
+                className="fade-in-up space-y-1.5 rounded-md border border-black/10 dark:border-white/10 p-2.5 transition-shadow duration-200 hover:shadow-sm"
               >
-                {AI_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                    {p.recommended ? " ★" : ""}
-                  </option>
-                ))}
-              </select>
-              <input
-                className={`${input} w-auto flex-1 min-w-[10rem]`}
-                placeholder="label (optional, e.g. personal key)"
-                value={k.label}
-                onChange={(e) =>
-                  setApiKeys((arr) =>
-                    arr.map((x, j) =>
-                      j === i ? { ...x, label: e.target.value } : x
-                    )
-                  )
-                }
-              />
-              <input
-                className={`${input} w-auto flex-1 min-w-[14rem] font-mono`}
-                type="password"
-                placeholder="API key"
-                value={k.key}
-                onChange={(e) =>
-                  setApiKeys((arr) =>
-                    arr.map((x, j) =>
-                      j === i ? { ...x, key: e.target.value } : x
-                    )
-                  )
-                }
-              />
-              <button
-                onClick={() =>
-                  setApiKeys((arr) => arr.filter((_, j) => j !== i))
-                }
-                className="text-red-600 text-sm px-1"
-                aria-label="Remove key"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    className={`${input} w-auto`}
+                    value={k.provider}
+                    onChange={(e) =>
+                      setApiKeys((arr) =>
+                        arr.map((x, j) =>
+                          j === i ? { ...x, provider: e.target.value } : x
+                        )
+                      )
+                    }
+                  >
+                    {AI_PROVIDERS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                        {p.recommended ? " ★" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={`${input} w-auto flex-1 min-w-[10rem]`}
+                    placeholder="label (optional, e.g. personal key)"
+                    value={k.label}
+                    onChange={(e) =>
+                      setApiKeys((arr) =>
+                        arr.map((x, j) =>
+                          j === i ? { ...x, label: e.target.value } : x
+                        )
+                      )
+                    }
+                  />
+                  <input
+                    className={`${input} w-auto flex-1 min-w-[14rem] font-mono`}
+                    type="password"
+                    placeholder="API key"
+                    value={k.key}
+                    onChange={(e) =>
+                      setApiKeys((arr) =>
+                        arr.map((x, j) =>
+                          j === i ? { ...x, key: e.target.value } : x
+                        )
+                      )
+                    }
+                  />
+                  <button
+                    onClick={() =>
+                      setApiKeys((arr) => arr.filter((_, j) => j !== i))
+                    }
+                    className="text-red-600 text-sm px-1 transition-transform duration-150 hover:scale-125"
+                    aria-label="Remove key"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {providerInfo && (
+                  <p className="text-xs text-black/50 dark:text-white/50">
+                    {providerInfo.howTo}{" "}
+                    <a
+                      href={providerInfo.keyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+                    >
+                      Get a free {providerInfo.label} key →
+                    </a>
+                  </p>
+                )}
+              </div>
+            );
+          })}
           <button
             onClick={() =>
               setApiKeys((arr) => [
@@ -361,7 +553,7 @@ export function ProfileForm() {
                 { provider: "gemini", label: "", key: "" },
               ])
             }
-            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline transition-transform duration-150 hover:translate-x-0.5 inline-block"
           >
             + Add API key
           </button>
@@ -411,7 +603,7 @@ export function ProfileForm() {
 
         <div className="flex flex-wrap gap-2 items-center">
           {scheduleTimes.map((t, i) => (
-            <div key={i} className="flex items-center gap-1">
+            <div key={i} className="fade-in-up flex items-center gap-1">
               <input
                 type="time"
                 value={t}
@@ -426,24 +618,85 @@ export function ProfileForm() {
                 onClick={() =>
                   setScheduleTimes((arr) => arr.filter((_, j) => j !== i))
                 }
-                className="text-red-600 text-sm px-1"
+                className="text-red-600 text-sm px-1 transition-transform duration-150 hover:scale-125"
                 aria-label="Remove time"
               >
                 ✕
               </button>
             </div>
           ))}
-          <button
-            onClick={() => setScheduleTimes((arr) => [...arr, "12:00"])}
-            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            + Add time
-          </button>
+          {scheduleTimes.length < maxScheduleTimes(plan) ? (
+            <button
+              onClick={() => setScheduleTimes((arr) => [...arr, "12:00"])}
+              className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline transition-transform duration-150 hover:translate-x-0.5"
+            >
+              + Add time
+            </button>
+          ) : (
+            <span className="text-xs text-black/50 dark:text-white/50">
+              {plan === "free"
+                ? "Free plan: 1 run/day — upgrade to Pro above for up to 8."
+                : `Max ${maxScheduleTimes(plan)} slots on Pro.`}
+            </span>
+          )}
         </div>
         <p className="text-xs text-black/50 dark:text-white/50">
           Runs via the app&apos;s in-process scheduler while the server is up. For
           Vercel, point a Vercel Cron at <code>/api/cron/run</code>.
         </p>
+
+        <div className="border-t border-black/5 dark:border-white/10 pt-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">Auto-approve top matches (Pro)</h3>
+              <p className="text-xs text-black/50 dark:text-white/50">
+                At each scheduled run, automatically move your best new matches from
+                &quot;Queued&quot; to &quot;Approved&quot; so they&apos;re ready to go —
+                this never submits anything on the employer&apos;s site by itself,
+                it just pre-sorts your queue for you.
+              </p>
+            </div>
+            <label className={`inline-flex items-center gap-2 text-sm shrink-0 ${plan === "pro" ? "cursor-pointer" : "cursor-not-allowed opacity-50"}`}>
+              <input
+                type="checkbox"
+                checked={autoApproveEnabled}
+                disabled={plan !== "pro"}
+                onChange={(e) => setAutoApproveEnabled(e.target.checked)}
+                className="h-4 w-4 accent-indigo-600"
+              />
+              Enabled
+            </label>
+          </div>
+          {plan !== "pro" && (
+            <p className="text-xs text-black/40 dark:text-white/40">🔒 Upgrade to Pro above to enable.</p>
+          )}
+          {autoApproveEnabled && plan === "pro" && (
+            <div className="fade-in-up flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                Min match score
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={autoApproveMinScore}
+                  onChange={(e) => setAutoApproveMinScore(e.target.value)}
+                  className={`${input} w-20`}
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                Max per run
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={autoApproveMaxPerRun}
+                  onChange={(e) => setAutoApproveMaxPerRun(e.target.value)}
+                  className={`${input} w-20`}
+                />
+              </label>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Cover letter tones */}
@@ -515,9 +768,6 @@ export function ProfileForm() {
           </span>
         )}
       </div>
-
-      {/* Job boards (auto-discovery) */}
-      <BoardsManager />
     </div>
   );
 }

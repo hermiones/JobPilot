@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const ref = searchParams.get("ref");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const res = await fetch(`/api/auth/${mode}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(ref ? { ref } : {}) }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -49,6 +51,12 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               : "Set up your profile and start applying faster."}
           </p>
         </div>
+
+        {mode === "register" && ref && (
+          <p className="fade-in-up rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900 px-3 py-2 text-xs text-indigo-700 dark:text-indigo-300">
+            🎁 You were invited by a friend — they&apos;re one step closer to unlocking Pro.
+          </p>
+        )}
 
         <form onSubmit={submit} className="space-y-3">
           <div>

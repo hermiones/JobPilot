@@ -6,9 +6,8 @@ const prisma = new PrismaClient();
 const DEFAULT_USER_EMAIL = "you@jobpilot.local";
 const DEFAULT_USER_PASSWORD = "jobpilot123";
 
-// Plain test account for quick local access — not a special "admin" role,
-// there is no admin/permissions system in this app. Every user is equal and
-// only ever sees their own data (see docs/HOW_IT_WORKS.md, section 6).
+// Test account with isAdmin: true — grants access to the /admin insights
+// panel. Every other user only ever sees their own data.
 const ADMIN_EMAIL = "admin@jobpilot.local";
 const ADMIN_PASSWORD = "admin";
 
@@ -74,9 +73,10 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
-    update: {},
+    update: { isAdmin: true },
     create: {
       email: ADMIN_EMAIL,
+      isAdmin: true,
       passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10),
       masterResume: "",
       coverLetterTemplates: JSON.stringify([

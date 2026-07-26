@@ -1,6 +1,6 @@
-import { getGemini, GEMINI_MODEL, extractJson } from "./gemini";
-import { generateJsonWithOpenAI } from "./openai";
-import { generateJsonWithAnthropic } from "./anthropic";
+import { getGemini, GEMINI_MODEL, GEMINI_MODEL_QUALITY, extractJson } from "./gemini";
+import { generateJsonWithOpenAI, OPENAI_MODEL, OPENAI_MODEL_QUALITY } from "./openai";
+import { generateJsonWithAnthropic, ANTHROPIC_MODEL, ANTHROPIC_MODEL_QUALITY } from "./anthropic";
 import type { ProviderId } from "./providers";
 
 export type TailorInput = {
@@ -13,16 +13,18 @@ export type TailorInput = {
   applicantName?: string;
   provider?: ProviderId;
   apiKey?: string;
+  // Pro plan gate: try the higher-quality model tier first, falling back to
+  // the fast/default model if the quality model errors (e.g. unavailable id).
+  quality?: boolean;
 };
 
 export type TailorResult = {
-  tailoredBullets: string[];
   matchedKeywords: string[];
   coverLetter: string;
   summary: string;
 };
 
-const SYSTEM = `You are an expert career coach and resume writer. You tailor a candidate's existing resume to a specific job description to pass ATS keyword screening while staying strictly truthful. Never invent experience, employers, degrees, or skills the candidate does not already have. Only reorder, rephrase, and emphasize what is present in the master resume.`;
+const SYSTEM = `You are an expert career coach and cover letter writer. You write a cover letter tailored to a specific job description, grounded strictly in the candidate's real resume. Never invent experience, employers, degrees, or skills the candidate does not already have.`;
 
 export async function tailorApplication(
   input: TailorInput
@@ -48,39 +50,56 @@ Applicant name: ${input.applicantName ?? "the candidate"}
 ## Task
 Return ONLY a JSON object with this exact shape:
 {
-  "tailoredBullets": string[],   // 4-6 resume bullet points, reordered/reworded for this JD, truthful to the master resume, each starting with a strong verb and including relevant keywords
   "matchedKeywords": string[],   // 5-12 important keywords/skills from the JD that the candidate genuinely has, for ATS
   "coverLetter": string,         // 150-220 word cover letter, JD-specific, in the requested tone, addressed to ${input.company}
   "summary": string              // one sentence explaining why this candidate fits this role
 }
 Do not include any commentary outside the JSON.`;
 
-  let text: string;
-  if (provider === "openai") {
-    if (!input.apiKey) throw new Error("Add your OpenAI API key in Profile → API Keys.");
-    text = await generateJsonWithOpenAI(prompt, input.apiKey);
-  } else if (provider === "anthropic") {
-    if (!input.apiKey) throw new Error("Add your Anthropic API key in Profile → API Keys.");
-    text = await generateJsonWithAnthropic(prompt, input.apiKey);
-  } else {
+  async function generateGemini(model: string): Promise<string> {
     const ai = getGemini(input.apiKey);
     const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
+      model,
       contents: prompt,
       config: {
         temperature: 0.6,
         responseMimeType: "application/json",
       },
     });
-    text = response.text ?? "";
+    return response.text ?? "";
+  }
+
+  let text: string;
+  if (provider === "openai") {
+    if (!input.apiKey) throw new Error("Add your OpenAI API key in Profile → API Keys.");
+    const model = input.quality ? OPENAI_MODEL_QUALITY : OPENAI_MODEL;
+    try {
+      text = await generateJsonWithOpenAI(prompt, input.apiKey, model);
+    } catch (e) {
+      if (!input.quality) throw e;
+      text = await generateJsonWithOpenAI(prompt, input.apiKey, OPENAI_MODEL);
+    }
+  } else if (provider === "anthropic") {
+    if (!input.apiKey) throw new Error("Add your Anthropic API key in Profile → API Keys.");
+    const model = input.quality ? ANTHROPIC_MODEL_QUALITY : ANTHROPIC_MODEL;
+    try {
+      text = await generateJsonWithAnthropic(prompt, input.apiKey, model);
+    } catch (e) {
+      if (!input.quality) throw e;
+      text = await generateJsonWithAnthropic(prompt, input.apiKey, ANTHROPIC_MODEL);
+    }
+  } else {
+    try {
+      text = await generateGemini(input.quality ? GEMINI_MODEL_QUALITY : GEMINI_MODEL);
+    } catch (e) {
+      if (!input.quality) throw e;
+      text = await generateGemini(GEMINI_MODEL);
+    }
   }
 
   const parsed = extractJson<TailorResult>(text);
 
   return {
-    tailoredBullets: Array.isArray(parsed.tailoredBullets)
-      ? parsed.tailoredBullets
-      : [],
     matchedKeywords: Array.isArray(parsed.matchedKeywords)
       ? parsed.matchedKeywords
       : [],

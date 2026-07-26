@@ -143,4 +143,18 @@ export const CANDIDATE_POOL: { slug: string; label?: string }[] = [
   { slug: "figma", label: "Figma" },
   { slug: "databricks", label: "Databricks" },
   { slug: "notion", label: "Notion" },
+  // Big-tech-adjacent — Google/Meta/Amazon/Apple run their own custom ATS
+  // (not Greenhouse/Lever), so they can't be pulled via this method, but
+  // these well-known companies do publish through Greenhouse/Lever.
+  { slug: "anthropic", label: "Anthropic" },
+  { slug: "coinbase", label: "Coinbase" },
+  { slug: "pinterest", label: "Pinterest" },
+  { slug: "reddit", label: "Reddit" },
+  { slug: "lyft", label: "Lyft" },
+  { slug: "block", label: "Block" },
+  { slug: "affirm", label: "Affirm" },
+  { slug: "instacart", label: "Instacart" },
+  { slug: "robinhood", label: "Robinhood" },
+  { slug: "discord", label: "Discord" },
+  { slug: "netflix", label: "Netflix" },
 ];

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/requireUser";
-import { tailorApplication } from "@/lib/ai/tailor";
+import { generateVariant } from "@/lib/ai/generateVariant";
+import { classifyAiError, PROVIDER_LABELS } from "@/lib/ai/errors";
 import { isProviderId } from "@/lib/ai/providers";
 
-// POST /api/tailor — generate tailored resume bullets + cover letter for an
-// application via Gemini and persist snapshots. Body: { applicationId, tone? }
+// POST /api/tailor — generate (or regenerate) the primary "A" variant for an
+// application and mark it selected. Body: { applicationId, tone? }
 export async function POST(req: Request) {
   const profile = await requireUser();
   if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,41 +39,13 @@ export async function POST(req: Request) {
     );
   }
 
-  const template =
-    profile.coverLetterTemplates.find((t) => t.tone === tone) ??
-    profile.coverLetterTemplates[0];
-
-  const provider = isProviderId(profile.preferredProvider)
-    ? profile.preferredProvider
-    : "gemini";
-  const apiKey = profile.apiKeys.find((k) => k.provider === provider)?.key;
-
   try {
-    const result = await tailorApplication({
-      masterResume: profile.masterResume,
-      coverLetterTone: tone ?? template?.tone,
-      coverLetterTemplate: template?.body,
-      jobTitle: app.jobListing.title,
-      company: app.jobListing.company,
-      jobDescription: app.jobListing.description,
-      provider,
-      apiKey,
-    });
-
-    const resumeVersion = result.tailoredBullets.join("\n");
-
-    await prisma.application.update({
-      where: { id: app.id },
-      data: {
-        resumeVersion,
-        coverLetterVersion: result.coverLetter,
-      },
-    });
-
+    const { result } = await generateVariant(profile, app, { label: "A", tone });
     return NextResponse.json(result);
   } catch (e) {
+    const provider = isProviderId(profile.preferredProvider) ? profile.preferredProvider : "gemini";
     return NextResponse.json(
-      { error: `AI tailoring failed: ${(e as Error).message}` },
+      { error: classifyAiError(e, PROVIDER_LABELS[provider] ?? provider) },
       { status: 502 }
     );
   }

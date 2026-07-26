@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import type { DashboardData } from "@/lib/apiTypes";
 import { STATUS_LABEL, STATUS_CLASS, STATUS_ORDER } from "@/lib/statusMeta";
 import { CountUp } from "@/components/CountUp";
+import { VariantAnalytics } from "@/components/VariantAnalytics";
 
 export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -93,6 +94,15 @@ export function Dashboard() {
         </div>
       </div>
 
+      <p
+        className="fade-in-up text-sm italic text-black/50 dark:text-white/50 border-l-2 border-indigo-400/40 pl-3"
+        style={{ ["--delay" as string]: "40ms" }}
+      >
+        &quot;You don&apos;t need 100 applications — you need 10 replies, 2 interviews, and
+        1 yes. Apply wide so the numbers work in your favor; the goal was never the 100,
+        it was the one.&quot;
+      </p>
+
       {message && (
         <div
           className="fade-in-up rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900 px-4 py-2 text-sm"
@@ -118,6 +128,53 @@ export function Dashboard() {
           <>🕒 Autopilot off — flip it on in <a href="/profile" className="text-indigo-600 dark:text-indigo-400 hover:underline">Profile</a> and let the queue fill itself.</>
         )}
       </div>
+
+      {/* Job hunt streak + community benchmark */}
+      <section
+        className="fade-in-up grid sm:grid-cols-3 gap-4"
+        style={{ ["--delay" as string]: "100ms" }}
+      >
+        <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
+          <div className="text-3xl font-black tabular-nums">
+            <CountUp value={data.daysSinceStart} />
+          </div>
+          <div className="text-sm font-medium mt-1">
+            day{data.daysSinceStart === 1 ? "" : "s"} on the hunt
+          </div>
+          <div className="text-xs text-black/50 dark:text-white/50 mt-0.5">
+            <CountUp value={data.totalApplied} /> total applications sent
+          </div>
+        </div>
+        <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
+          <div className="text-3xl font-black tabular-nums">
+            {data.streakDays > 0 ? `🔥 ${data.streakDays}` : "0"}
+          </div>
+          <div className="text-sm font-medium mt-1">
+            day{data.streakDays === 1 ? "" : "s"} streak
+          </div>
+          <div className="text-xs text-black/50 dark:text-white/50 mt-0.5">
+            {data.streakDays > 0
+              ? "Apply today to keep it alive"
+              : "Apply today to start one"}
+          </div>
+        </div>
+        <div className="card-surface rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md p-5">
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-black tabular-nums">
+              <CountUp value={data.weeklyApplied} />
+            </span>
+            <span className="text-sm text-black/50 dark:text-white/50">this week</span>
+          </div>
+          <div className="text-sm font-medium mt-1">
+            {data.weeklyApplied >= data.communityAvgWeekly
+              ? "🔥 Ahead of the pack"
+              : "📈 Room to catch up"}
+          </div>
+          <div className="text-xs text-black/50 dark:text-white/50 mt-0.5">
+            Other Job Pilot users average ~{data.communityAvgWeekly}/week
+          </div>
+        </div>
+      </section>
 
       {/* Daily goal */}
       <section
@@ -168,6 +225,8 @@ export function Dashboard() {
           ))}
         </div>
       </section>
+
+      <VariantAnalytics />
 
       {/* Follow-ups */}
       <section

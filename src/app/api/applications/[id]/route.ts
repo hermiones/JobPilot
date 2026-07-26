@@ -3,6 +3,7 @@ import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth/requireUser";
 import { serializeApplication } from "@/lib/serialize";
+import { maybeActivateProOnFirstApplication } from "@/lib/user";
 
 const VALID_STATUS = [
   "queued",
@@ -46,6 +47,14 @@ export async function PATCH(
       if (!existing.followUpDate) {
         data.followUpDate = addDays(new Date(), 7);
       }
+      // Freeze which variant was used at the moment of applying, so later
+      // edits/swaps don't retroactively change A/B attribution.
+      if (existing.selectedVariantId && !existing.appliedVariantLabel) {
+        const variant = await prisma.applicationVariant.findUnique({
+          where: { id: existing.selectedVariantId },
+        });
+        if (variant) data.appliedVariantLabel = variant.label;
+      }
     }
   }
 
@@ -58,6 +67,10 @@ export async function PATCH(
     where: { id },
     data,
   });
+
+  if (data.appliedAt) {
+    await maybeActivateProOnFirstApplication(profile.id);
+  }
 
   return NextResponse.json(serializeApplication(updated));
 }

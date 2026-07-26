@@ -2,10 +2,12 @@ import type { User } from "@prisma/client";
 
 export type CoverLetterTemplate = { tone: string; body: string };
 export type ApiKeyEntry = { provider: string; label: string; key: string };
+export type CodingProfileEntry = { platform: string; url: string };
 
 export type ParsedProfile = {
   id: string;
   email: string;
+  createdAt: Date;
   masterResume: string;
   masterResumeFileName: string | null;
   coverLetterTemplates: CoverLetterTemplate[];
@@ -18,6 +20,16 @@ export type ParsedProfile = {
   scheduleTimes: string[];
   apiKeys: ApiKeyEntry[];
   preferredProvider: string;
+  plan: string;
+  referralCode: string;
+  isAdmin: boolean;
+  autoApproveEnabled: boolean;
+  autoApproveMinScore: number;
+  autoApproveMaxPerRun: number;
+  codingProfiles: CodingProfileEntry[];
+  gmailConnected: boolean;
+  gmailEmail: string | null;
+  gmailLastSyncedAt: Date | null;
 };
 
 function safeArray<T>(json: string, fallback: T[]): T[] {
@@ -33,6 +45,7 @@ export function parseUser(user: User): ParsedProfile {
   return {
     id: user.id,
     email: user.email,
+    createdAt: user.createdAt,
     masterResume: user.masterResume,
     masterResumeFileName: user.masterResumeFileName,
     coverLetterTemplates: safeArray<CoverLetterTemplate>(
@@ -48,5 +61,15 @@ export function parseUser(user: User): ParsedProfile {
     scheduleTimes: safeArray<string>(user.scheduleTimes, []),
     apiKeys: safeArray<ApiKeyEntry>(user.apiKeys, []),
     preferredProvider: user.preferredProvider,
+    plan: user.plan,
+    referralCode: user.referralCode,
+    isAdmin: user.isAdmin,
+    autoApproveEnabled: user.autoApproveEnabled,
+    autoApproveMinScore: user.autoApproveMinScore,
+    autoApproveMaxPerRun: user.autoApproveMaxPerRun,
+    codingProfiles: safeArray<CodingProfileEntry>(user.codingProfiles, []),
+    gmailConnected: user.gmailConnected,
+    gmailEmail: user.gmailEmail,
+    gmailLastSyncedAt: user.gmailLastSyncedAt,
   };
 }

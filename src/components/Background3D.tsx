@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   Float,
@@ -14,6 +14,7 @@ import {
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
+import { getAppTheme, THEME_EVENT, THEME_3D_PALETTES, type ThemeId } from "@/lib/theme";
 
 type ShapeKind = "ico" | "torus" | "dodec" | "octa" | "knot";
 
@@ -107,25 +108,44 @@ function Rig({ children }: { children: React.ReactNode }) {
   return <group ref={group}>{children}</group>;
 }
 
+// Shape layout (position/kind/scale/speed/wireframe) stays fixed — only the
+// color per shape changes with the selected theme, cycling through that
+// theme's palette (see THEME_3D_PALETTES in src/lib/theme.ts).
+const SHAPE_LAYOUT = [
+  { position: [-4.5, 2, -2], kind: "ico", scale: 1.2, speed: 0.9 },
+  { position: [4.5, -1.5, -1], kind: "torus", scale: 1, speed: 1.1 },
+  { position: [-3.5, -2.8, -3], kind: "dodec", scale: 0.9, speed: 0.8 },
+  { position: [4, 2.8, -4], kind: "ico", scale: 0.75, speed: 1.3 },
+  { position: [0, 0.3, -6.5], kind: "dodec", scale: 1.7, speed: 0.6 },
+  { position: [-5.5, 0, -5], kind: "torus", scale: 0.7, speed: 1.2 },
+  { position: [2, -3, -2.5], kind: "octa", scale: 0.8, speed: 1 },
+  { position: [-2, 3.2, -3.5], kind: "knot", scale: 0.7, speed: 0.7 },
+  { position: [5.5, 0.5, -6], kind: "octa", scale: 0.6, speed: 1.4 },
+  { position: [-1, -1.5, -1.5], kind: "ico", scale: 0.45, speed: 1.6, wireframe: true },
+  { position: [1.5, 3.5, -2], kind: "octa", scale: 0.4, speed: 1.8, wireframe: true },
+  { position: [-6, -1.5, -2], kind: "ico", scale: 0.55, speed: 1.1, wireframe: true },
+  { position: [6, -2.5, -3], kind: "torus", scale: 0.5, speed: 1.5, wireframe: true },
+] as const;
+
 export function Background3D() {
+  const [theme, setTheme] = useState<ThemeId>("default");
+
+  useEffect(() => {
+    setTheme(getAppTheme());
+    const onChange = (e: Event) => setTheme((e as CustomEvent<ThemeId>).detail);
+    window.addEventListener(THEME_EVENT, onChange);
+    return () => window.removeEventListener(THEME_EVENT, onChange);
+  }, []);
+
+  const palette = THEME_3D_PALETTES[theme] ?? THEME_3D_PALETTES.default;
+
   const shapes = useMemo(
     () =>
-      [
-        { position: [-4.5, 2, -2], color: "#6366f1", kind: "ico", scale: 1.2, speed: 0.9 },
-        { position: [4.5, -1.5, -1], color: "#8b5cf6", kind: "torus", scale: 1, speed: 1.1 },
-        { position: [-3.5, -2.8, -3], color: "#38bdf8", kind: "dodec", scale: 0.9, speed: 0.8 },
-        { position: [4, 2.8, -4], color: "#a78bfa", kind: "ico", scale: 0.75, speed: 1.3 },
-        { position: [0, 0.3, -6.5], color: "#4f46e5", kind: "dodec", scale: 1.7, speed: 0.6 },
-        { position: [-5.5, 0, -5], color: "#22d3ee", kind: "torus", scale: 0.7, speed: 1.2 },
-        { position: [2, -3, -2.5], color: "#c084fc", kind: "octa", scale: 0.8, speed: 1 },
-        { position: [-2, 3.2, -3.5], color: "#818cf8", kind: "knot", scale: 0.7, speed: 0.7 },
-        { position: [5.5, 0.5, -6], color: "#67e8f9", kind: "octa", scale: 0.6, speed: 1.4 },
-        { position: [-1, -1.5, -1.5], color: "#a5b4fc", kind: "ico", scale: 0.45, speed: 1.6, wireframe: true },
-        { position: [1.5, 3.5, -2], color: "#f472b6", kind: "octa", scale: 0.4, speed: 1.8, wireframe: true },
-        { position: [-6, -1.5, -2], color: "#34d399", kind: "ico", scale: 0.55, speed: 1.1, wireframe: true },
-        { position: [6, -2.5, -3], color: "#fbbf24", kind: "torus", scale: 0.5, speed: 1.5, wireframe: true },
-      ] as const,
-    []
+      SHAPE_LAYOUT.map((s, i) => ({
+        ...s,
+        color: palette.colors[i % palette.colors.length],
+      })),
+    [palette]
   );
 
   return (
@@ -140,8 +160,8 @@ export function Background3D() {
       >
         <ambientLight intensity={0.5} />
         <directionalLight position={[5, 5, 5]} intensity={1.1} />
-        <pointLight position={[-5, -5, 2]} intensity={1} color="#8b5cf6" />
-        <pointLight position={[5, 4, -2]} intensity={0.7} color="#22d3ee" />
+        <pointLight position={[-5, -5, 2]} intensity={1} color={palette.light1} />
+        <pointLight position={[5, 4, -2]} intensity={0.7} color={palette.light2} />
         <Rig>
           {shapes.map((s, i) => (
             <Shape
@@ -160,12 +180,12 @@ export function Background3D() {
             size={2.5}
             speed={0.3}
             opacity={0.6}
-            color="#a5b4fc"
+            color={palette.sparkle}
           />
         </Rig>
         <EffectComposer>
           <Bloom
-            intensity={0.7}
+            intensity={palette.glowIntensity}
             luminanceThreshold={0.2}
             luminanceSmoothing={0.9}
             mipmapBlur

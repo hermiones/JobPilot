@@ -62,11 +62,16 @@ export async function GET(
   }
 
   const buf = Buffer.from(app.attachedResumeData, "base64");
-  const name = app.attachedResumeName ?? "resume";
+  // Filename came from a user-uploaded file's original name — strip quotes
+  // and control characters before it goes into a response header, since an
+  // unescaped value there is a header/CRLF-injection vector.
+  const safeName = (app.attachedResumeName ?? "resume")
+    .replace(/[\r\n"]/g, "")
+    .slice(0, 200);
   return new Response(new Uint8Array(buf), {
     headers: {
       "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${name}"`,
+      "Content-Disposition": `attachment; filename="${safeName}"`,
     },
   });
 }

@@ -34,6 +34,21 @@ model User {
   scheduleTimes          String   @default("[]") // JSON array of IST "HH:MM" strings; auto-refresh runs at these times
   apiKeys                String   @default("[]") // JSON array of { provider, label, key } — bring-your-own AI provider keys
   preferredProvider      String   @default("gemini") // which apiKeys entry (by provider) to use for tailoring
+  plan                   String   @default("free") // free | pro — gates variant count, schedule slots, model quality
+  referralCode           String   @unique @default(cuid()) // shareable code — 3 successful signups via this code auto-upgrades to pro
+  referredById           String? // id of the user whose referral link this account signed up through
+  isAdmin                Boolean  @default(false) // gates access to /admin insights panel
+  autoApproveEnabled     Boolean  @default(false) // Pro: auto-move top matches from queued -> approved at scheduled runs (never auto-submits to the employer)
+  autoApproveMinScore    Int      @default(50)
+  autoApproveMaxPerRun   Int      @default(20)
+  codingProfiles         String   @default("[]") // JSON array of { platform, url } — LeetCode/GitHub/etc, shown on your profile
+  gmailConnected         Boolean  @default(false)
+  gmailEmail             String? // which Gmail address is connected, for display only
+  gmailRefreshToken      String? // OAuth refresh token — same storage tradeoff as bring-your-own apiKeys (plaintext in DB)
+  gmailLastSyncedAt      DateTime?
+
+  referredBy  User?  @relation("Referrals", fields: [referredById], references: [id])
+  referrals   User[] @relation("Referrals")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -90,12 +105,58 @@ model Application {
   notes            String?
   followUpDate     DateTime?
   createdAt        DateTime          @default(now())
+  selectedVariantId  String? // which ApplicationVariant is currently active in the review UI
+  appliedVariantLabel String? // label ("A"/"B"/"C") of the variant selected at the moment status became "applied" — frozen for A/B analytics attribution
 
   user       User       @relation(fields: [userId], references: [id])
   jobListing JobListing @relation(fields: [jobListingId], references: [id])
+  variants   ApplicationVariant[]
 
   @@unique([userId, jobListingId])
   @@index([userId, status])
+}
+
+// A single AI-generated resume/cover-letter variant for an application. Pro
+// plan users can generate multiple (A/B/C) to test which lands more
+// responses — see Application.appliedVariantLabel for outcome attribution.
+model ApplicationVariant {
+  id                 String   @id @default(cuid())
+  applicationId      String
+  label              String // "A" | "B" | "C"
+  tone               String?
+  resumeVersion      String
+  coverLetterVersion String
+  createdAt          DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, label])
+}
+
+// Server-side record of a long-lived refresh token so it can be revoked
+// (logout, admin action) instead of remaining valid until natural expiry —
+// unlike the short-lived access token, which is a stateless signed JWT with
+// no DB-side kill switch.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // sha256 of the plaintext cookie value — never store it raw
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  rating    Int? // 1-5 stars, optional
+  message   String
+  page      String? // which page the feedback was submitted from
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Match {

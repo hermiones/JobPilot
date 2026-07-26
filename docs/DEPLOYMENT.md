@@ -4,6 +4,36 @@ Two setups: running it on your own machine (Local), and putting it on the intern
 
 ---
 
+## Expected infrastructure sizing
+
+Job Pilot is intentionally lightweight — there's no heavy compute (no local ML models, no browser automation, no vector DB). Sizing below assumes a few dozen to a few hundred active users; re-evaluate if you're planning for thousands.
+
+| Component | Recommendation | Why |
+|---|---|---|
+| **App hosting** | Vercel Hobby (free) to start; **Vercel Pro** ($20/mo) once you need >1 cron run/day, >10s function timeout, or a custom domain with team access | The app is a standard Next.js app — no special compute needs. Serverless functions here are I/O-bound (waiting on Greenhouse/Lever/AI provider responses), not CPU-bound. |
+| **vCPU / memory per function** | Vercel's default (1 vCPU, 1024 MB) is enough for every route in this app, including the job-refresh aggregator and PDF generation | Nothing here does heavy in-memory processing; the biggest job is generating a Prisma raw query result set (~150 rows) or a small PDF (a few KB). |
+| **Database** | **Neon Postgres** free tier (0.5 GB storage, autosuspend) is enough for dev/demo. For steady production use with a few hundred users and the full job pool (a few thousand `JobListing` rows), move to Neon's **Launch** tier (~$19/mo, 10 GB storage, no autosuspend) | Autosuspend on the free tier adds cold-start latency (the DB "wakes up" on first query after idling) — fine for a demo, annoying for real users. `JobListing` + `Match` are the biggest tables; a few thousand jobs × a few hundred users' worth of matches is still low tens of MB, well within Launch tier. |
+| **Function timeout** | `maxDuration = 60` is already set on the cron/refresh route. Vercel Hobby caps most functions at 10s regardless of this setting — a refresh across 20+ boards can exceed that. This is one concrete reason to move to Pro (60s+ default) before relying on the scheduled refresh in production. | |
+| **AI provider costs** | Variable, based on usage — Gemini Flash's free tier covers light usage; budget for it once you have real Pro users generating multiple cover-letter variants per job | Each cover letter generation is one LLM call with a resume + JD in the prompt — a few hundred to ~1k tokens in, a few hundred out. Cheap per-call, but multiply by users × variants × daily volume. |
+| **Object/file storage** | None needed — resume files and generated PDFs are stored as base64 in Postgres (`bytea`-equivalent text columns), not in a separate blob store | Simplifies the stack for this scale; would need to move to Vercel Blob or S3 if resume files got large or numerous enough to bloat the Postgres plan. |
+
+**Bottom line for a real (paying-users) launch**: Vercel Pro ($20/mo) + Neon Launch (~$19/mo) + your own AI provider spend ≈ **$40–60/mo fixed** before variable AI costs, comfortably covering a few hundred active users.
+
+### Sizing for a 100 requests/minute target
+
+That's roughly 1.7 req/s sustained — well inside what the stack below handles without changes, but three specific things are worth confirming before you actually hit that load:
+
+| Concern | Current state | What to do at this scale |
+|---|---|---|
+| **Serverless function concurrency** | Vercel auto-scales function instances per request; there's no shared process, so 100 req/min spread across users is trivially parallel | No action needed — this is exactly what serverless is for. Fluid Compute (Vercel's default) also reuses warm instances, reducing cold starts under sustained load. |
+| **Database connections** | The `DATABASE_URL` should already be Neon's **pooled** connection string (has `-pooler` in the hostname) — check `.env`, it determines whether many concurrent serverless functions can all reach Postgres without exhausting connections | If you're on the *unpooled* Neon connection string, switch to the pooled one before this load — otherwise you'll see "too many connections" errors under concurrent traffic. |
+| **In-memory rate limiter** (`src/lib/auth/rateLimit.ts`) | Lives in a single function instance's memory — on Vercel, different concurrent requests can land on *different* instances, so the login/register rate limit is only a soft per-instance speed bump, not a hard global cap, once you're horizontally scaled across many instances | Fine for deterring casual brute-forcing today. For a hard guarantee at real scale, move this to a shared store (Upstash Redis, or Vercel Firewall's built-in rate limiting) — noted as a known limitation, not silently fixed. |
+| **Job aggregation / scheduled refresh** | One refresh cycle hits ~22 external boards in parallel, then batches DB writes — this is the heaviest single operation in the app, but it's a scheduled background job, not a per-request path, so it doesn't scale with request rate | No change needed — this runs on a timer, not per-user-request. |
+
+Net: 100 req/min needs the pooled DB connection string as the one non-negotiable check; everything else in the stack already scales horizontally by default because it's stateless serverless functions talking to a managed Postgres.
+
+---
+
 ## Local setup
 
 Use this to develop, test changes, or just run Job Pilot for yourself without deploying anywhere.
@@ -33,15 +63,25 @@ DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
 GEMINI_API_KEY="your-gemini-api-key-here"
 AUTH_SECRET="a-random-64-character-string"
 CRON_SECRET=""
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
 ```
 
-- `DATABASE_URL` — your Neon (or other Postgres) connection string.
-- `GEMINI_API_KEY` — from Google AI Studio.
-- `AUTH_SECRET` — signs login session cookies. Generate one with:
+- `DATABASE_URL` — your Neon (or other Postgres) connection string. Use the **pooled** one (hostname contains `-pooler`) — see the scaling note above.
+- `GEMINI_API_KEY` — from Google AI Studio. This is the shared fallback key; users can also bring their own Gemini/OpenAI/Anthropic key in Profile.
+- `AUTH_SECRET` — signs both the access-token and OAuth-state JWTs. Generate one with:
   ```bash
   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   ```
 - `CRON_SECRET` — leave blank for local use. It's only needed if you expose `/api/cron/run` publicly (see the Vercel section).
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — optional; only needed for the Gmail auto-status-detection feature (Profile → "Auto-detect replies"). Leave blank to disable it (the connect button will show a clear "not configured" error instead of crashing). To set it up:
+  1. Go to [Google Cloud Console](https://console.cloud.google.com/) → create a project (or use an existing one).
+  2. **APIs & Services → Library** → enable the **Gmail API**.
+  3. **APIs & Services → OAuth consent screen** → set it up (External user type is fine for testing; add your own Google account as a test user while the app is unverified).
+  4. **APIs & Services → Credentials → Create Credentials → OAuth client ID** → Application type: **Web application**.
+  5. Add an **Authorized redirect URI**: `http://localhost:3000/api/gmail/callback` for local dev, and `https://your-domain.vercel.app/api/gmail/callback` for production.
+  6. Copy the generated **Client ID** and **Client Secret** into `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
+  7. Note: while the OAuth consent screen is in "Testing" mode (the default, and fine for a personal/small deployment), only Google accounts you've explicitly added as test users can complete the connect flow — publish the app (Google's verification process) if you need it open to arbitrary users.
 
 **Never commit `.env`.** It's already in `.gitignore`. `.env.example` is the template that's safe to commit — it has no real secrets.
 
@@ -93,6 +133,7 @@ In **Project Settings → Environment Variables**, add the same variables as loc
 | `GEMINI_API_KEY` | Your Gemini API key |
 | `AUTH_SECRET` | A random 64-character string (generate a **new one** for production — don't reuse your local dev secret) |
 | `CRON_SECRET` | A random string — this protects the scheduled-refresh endpoint from being called by strangers |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Optional — only if you want the Gmail auto-status-detection feature live in production. Remember to add the production callback URL as an authorized redirect URI in the Google Cloud OAuth client (see Local setup above). |
 
 ### 3. Apply migrations to the production database
 

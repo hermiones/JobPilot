@@ -20,6 +20,8 @@ export function getGemini(apiKey?: string): GoogleGenAI {
 // Fast, cheap model is ideal for high-volume per-job tailoring (<10s target).
 // "-latest" alias tracks the current stable Flash model without code changes.
 export const GEMINI_MODEL = "gemini-flash-latest";
+// Higher-quality tier for Pro plan users — slower/pricier, better prose.
+export const GEMINI_MODEL_QUALITY = "gemini-pro-latest";
 
 // Pull the first JSON object/array out of a model response that may be wrapped
 // in markdown fences or prose.

@@ -1,8 +1,68 @@
 @import "tailwindcss";
 
+/* Switches Tailwind's `dark:` utility variant from OS-media-based to
+   class-based, so the explicit Light/Dark/theme picker in NavBar can
+   override the system setting instead of just following it. ThemeInit.tsx
+   toggles this class based on the selected theme (see src/lib/theme.ts);
+   "System (Auto)" is the only choice that still tracks the OS preference
+   live via a matchMedia listener. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f7f8fa;
   --foreground: #171717;
+  --accent-1: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #22d3ee;
+  --glow-opacity: 0.35;
+  --glow-opacity-hover: 0.6;
+}
+.dark {
+  --background: #0b0d10;
+  --foreground: #ededed;
+}
+
+/* Theme presets — applied via [data-app-theme] on <html>, set from the
+   selector in NavBar and persisted in localStorage (see src/lib/theme.ts).
+   Each just remaps the accent gradient + background; component classes
+   below (.gradient-text, .glow-accent, .card-surface) read the vars so
+   nothing else needs to change per-theme. Light/Dark/System only toggle
+   the .dark class above and don't need an entry here. */
+[data-app-theme="neon"] {
+  --background: #0a0014;
+  --foreground: #f0e6ff;
+  --accent-1: #ff2ee0;
+  --accent-2: #7c3aff;
+  --accent-3: #00f0ff;
+  --glow-opacity: 0.55;
+  --glow-opacity-hover: 0.9;
+}
+[data-app-theme="comfort"] {
+  --background: #f6efe1;
+  --foreground: #3a3226;
+  --accent-1: #b45309;
+  --accent-2: #a16207;
+  --accent-3: #78716c;
+  --glow-opacity: 0.15;
+  --glow-opacity-hover: 0.25;
+}
+[data-app-theme="kawaii"] {
+  --background: #fff0f6;
+  --foreground: #5b3a4a;
+  --accent-1: #ff6ec7;
+  --accent-2: #c77dff;
+  --accent-3: #7de2d1;
+  --glow-opacity: 0.4;
+  --glow-opacity-hover: 0.65;
+}
+[data-app-theme="formal"] {
+  --background: #ffffff;
+  --foreground: #1e293b;
+  --accent-1: #1e3a8a;
+  --accent-2: #334155;
+  --accent-3: #0f766e;
+  --glow-opacity: 0.12;
+  --glow-opacity-hover: 0.2;
 }
 
 @theme inline {
@@ -10,13 +70,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0d10;
-    --foreground: #ededed;
-  }
 }
 
 html {
@@ -52,15 +105,15 @@ button:not(:disabled):active {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .card-surface:hover {
-  box-shadow: 0 12px 36px -10px rgba(99, 102, 241, 0.35),
-    0 4px 12px -4px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 12px 36px -10px color-mix(in srgb, var(--accent-1) 35%, transparent),
+    0 4px 12px -4px color-mix(in srgb, var(--accent-2) 20%, transparent);
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: color-mix(in srgb, var(--accent-1) 35%, transparent);
 }
 
 /* Gradient text for hero-style headings. */
 .gradient-text {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6 45%, #22d3ee 100%);
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2) 45%, var(--accent-3) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -81,14 +134,14 @@ button:not(:disabled):active {
   position: absolute;
   inset: -6px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6, #22d3ee);
-  opacity: 0.35;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2), var(--accent-3));
+  opacity: var(--glow-opacity);
   filter: blur(14px);
   z-index: -1;
   transition: opacity 250ms ease;
 }
 .glow-accent:hover::after {
-  opacity: 0.6;
+  opacity: var(--glow-opacity-hover);
 }
 
 /* Entrance animation — fades + slides content up on mount. Apply

@@ -5,6 +5,6 @@ import { requireUser } from "@/lib/auth/requireUser";
 export async function GET() {
   const user = await requireUser();
   return NextResponse.json({
-    user: user ? { id: user.id, email: user.email } : null,
+    user: user ? { id: user.id, email: user.email, isAdmin: user.isAdmin } : null,
   });
 }
