@@ -1,8 +1,8 @@
 # Job Pilot ✈
 
-A high-volume job application assistant. Job Pilot aggregates listings from public job APIs, scores them against your profile, uses Gemini to tailor resume bullets and cover letters per job, and gives you a fast review-and-apply workflow with a pipeline tracker — all while keeping the final "Apply" click on the employer's real site (no bot login, no auto-submit).
+A high-volume job application assistant. Job Pilot aggregates listings from public job APIs, scores them against your profile, uses AI to tailor a cover letter per job (with A/B/C variant testing on Pro), and gives you a fast review-and-apply workflow (plus a one-click Easy Apply lane) with a pipeline tracker — all while keeping the final "Apply" click on the employer's real site (no bot login, no auto-submit).
 
-Built with **Next.js (App Router) · TypeScript · Tailwind CSS · Prisma + Postgres (Neon) · Google Gemini**. Multi-user with email/password login — everyone gets their own private profile, queue, and tracker.
+Built with **Next.js (App Router) · TypeScript · Tailwind CSS · Prisma + Postgres (Neon) · Gemini/OpenAI/Anthropic (bring-your-own-key)**. Multi-user with email/password login — everyone gets their own private profile, queue, and tracker, plus an admin analytics panel.
 
 📄 The full product spec lives in [docs/PRD.md](docs/PRD.md).
 🛠️ Setting it up? See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for local + Vercel instructions.
