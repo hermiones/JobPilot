@@ -16,27 +16,40 @@ export function Tracker() {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [counts, setCounts] = useState<Counts | null>(null);
   const [total, setTotal] = useState(0);
+  const [matchedTotal, setMatchedTotal] = useState<number | null>(null);
   const [limit, setLimit] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Status | "all">("all");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Debounce the search box so we're not hitting the API on every keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
 
   // Filtering happens server-side — with thousands of queued matches possible,
   // fetching everything into the browser just to filter client-side doesn't scale.
-  const load = useCallback(async (f: Status | "all") => {
+  const load = useCallback(async (f: Status | "all", q: string) => {
     setLoading(true);
-    const qs = f === "all" ? "" : `?status=${f}`;
-    const res = await fetch(`/api/applications${qs}`);
+    const params = new URLSearchParams();
+    if (f !== "all") params.set("status", f);
+    if (q) params.set("q", q);
+    const qs = params.toString();
+    const res = await fetch(`/api/applications${qs ? `?${qs}` : ""}`);
     const data = await res.json();
     setItems(data.items);
     setCounts(data.counts);
     setTotal(data.total);
+    setMatchedTotal(data.matchedTotal);
     setLimit(data.limit);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    load(filter);
-  }, [load, filter]);
+    load(filter, debouncedQuery);
+  }, [load, filter, debouncedQuery]);
 
   async function updateStatus(id: string, status: Status) {
     setItems((arr) =>
@@ -51,7 +64,7 @@ export function Tracker() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    load(filter);
+    load(filter, debouncedQuery);
   }
 
   return (
@@ -73,6 +86,28 @@ export function Tracker() {
         </a>
       </div>
 
+      <div className="fade-in-up relative max-w-sm">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40">
+          🔍
+        </span>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by role or company…"
+          className="w-full rounded-md border border-black/15 dark:border-white/15 bg-white/80 dark:bg-white/[0.06] backdrop-blur-md pl-9 pr-8 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-1.5">
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
           All ({total})
@@ -84,10 +119,11 @@ export function Tracker() {
         ))}
       </div>
 
-      {items.length > 0 && total > limit && (
+      {items.length > 0 && (matchedTotal ?? total) > limit && (
         <p className="text-xs text-black/50 dark:text-white/50">
-          Showing the {limit} most recently updated of {total} — narrow with a
-          status filter to see more.
+          Showing the {limit} most recently updated of {matchedTotal ?? total}
+          {matchedTotal !== null ? " matching" : ""} — narrow with a status
+          filter{matchedTotal === null ? " or search" : ""} to see more.
         </p>
       )}
 
@@ -99,7 +135,9 @@ export function Tracker() {
         </div>
       ) : items.length === 0 ? (
         <p className="fade-in-up text-sm text-black/60 dark:text-white/60 py-8 text-center">
-          Nothing here yet{filter !== "all" ? ` with status “${STATUS_LABEL[filter]}”` : ""} — go make it happen in the Review Queue.
+          {debouncedQuery
+            ? `No matches for "${debouncedQuery}"${filter !== "all" ? ` in ${STATUS_LABEL[filter]}` : ""}.`
+            : `Nothing here yet${filter !== "all" ? ` with status “${STATUS_LABEL[filter]}”` : ""} — go make it happen in the Review Queue.`}
         </p>
       ) : (
         <div className="fade-in-up overflow-x-auto rounded-xl border border-black/10 dark:border-white/10 card-surface">

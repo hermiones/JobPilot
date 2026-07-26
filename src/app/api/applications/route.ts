@@ -19,24 +19,45 @@ export async function GET(req: Request) {
   const profile = await requireUser();
   if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const statusParam = new URL(req.url).searchParams.get("status");
+  const url = new URL(req.url);
+  const statusParam = url.searchParams.get("status");
   const status =
     statusParam && (STATUS_ORDER as readonly string[]).includes(statusParam)
       ? (statusParam as Status)
       : null;
+  const q = url.searchParams.get("q")?.trim().slice(0, 200) || null;
 
-  const [apps, grouped] = await Promise.all([
+  const searchWhere = q
+    ? {
+        jobListing: {
+          OR: [
+            { title: { contains: q, mode: "insensitive" as const } },
+            { company: { contains: q, mode: "insensitive" as const } },
+          ],
+        },
+      }
+    : {};
+
+  const [apps, grouped, matchedTotal] = await Promise.all([
     prisma.application.findMany({
-      where: { userId: profile.id, ...(status ? { status } : {}) },
+      where: { userId: profile.id, ...(status ? { status } : {}), ...searchWhere },
       include: { jobListing: true },
       orderBy: { lastUpdated: "desc" },
       take: TRACKER_LIMIT,
     }),
+    // Unfiltered by `q` on purpose — the status chip counts (and the overall
+    // "N applications" header) reflect everything, not just the current
+    // search, so search doesn't make the surrounding context disappear.
     prisma.application.groupBy({
       by: ["status"],
       where: { userId: profile.id },
       _count: { _all: true },
     }),
+    q
+      ? prisma.application.count({
+          where: { userId: profile.id, ...(status ? { status } : {}), ...searchWhere },
+        })
+      : Promise.resolve(null),
   ]);
 
   const counts = Object.fromEntries(
@@ -61,5 +82,11 @@ export async function GET(req: Request) {
       : null,
   }));
 
-  return NextResponse.json({ items, counts, total, limit: TRACKER_LIMIT });
+  return NextResponse.json({
+    items,
+    counts,
+    total,
+    limit: TRACKER_LIMIT,
+    matchedTotal, // null when not searching; the true count of q-matching rows otherwise
+  });
 }

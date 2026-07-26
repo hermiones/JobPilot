@@ -6,6 +6,7 @@ import { BackgroundMount } from "@/components/BackgroundMount";
 import { FeedbackWidget } from "@/components/FeedbackWidget";
 import { ThemeInit } from "@/components/ThemeInit";
 import { SessionRefresher } from "@/components/SessionRefresher";
+import { Footer } from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
         <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
           {children}
         </main>
+        <Footer />
         <FeedbackWidget />
       </body>
     </html>

@@ -4,10 +4,12 @@
 export const BG3D_STORAGE_KEY = "jobpilot:bg3d-enabled";
 export const BG3D_EVENT = "jobpilot:bg3d-changed";
 
+// Off by default — a plain, distraction-free UI is the baseline; the 3D
+// scene is an opt-in flourish via the header's theme picker or Profile.
 export function getBg3dEnabled(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   const stored = window.localStorage.getItem(BG3D_STORAGE_KEY);
-  return stored === null ? true : stored === "1";
+  return stored === "1";
 }
 
 export function setBg3dEnabled(enabled: boolean) {

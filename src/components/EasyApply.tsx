@@ -16,6 +16,7 @@ export function EasyApply() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [withCoverLetter, setWithCoverLetter] = useState(false);
+  const [coverLetterProgress, setCoverLetterProgress] = useState<{ done: number; total: number } | null>(null);
   const MAX_BULK_WITH_COVER_LETTER = 20;
 
   const load = useCallback(async () => {
@@ -70,13 +71,14 @@ export function EasyApply() {
 
     if (withCoverLetter) {
       const capped = ids.slice(0, MAX_BULK_WITH_COVER_LETTER);
-      setMessage(`✉️ Writing ${capped.length} cover letter(s)…`);
-      for (const id of capped) {
+      setCoverLetterProgress({ done: 0, total: capped.length });
+      for (let i = 0; i < capped.length; i++) {
         await fetch("/api/tailor", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ applicationId: id }),
+          body: JSON.stringify({ applicationId: capped[i] }),
         }).catch(() => {});
+        setCoverLetterProgress({ done: i + 1, total: capped.length });
       }
     }
 
@@ -95,6 +97,7 @@ export function EasyApply() {
     setItems((arr) => arr.filter((x) => !selected.has(x.application.id)));
     setSelected(new Set());
     setBulkBusy(false);
+    setCoverLetterProgress(null);
   }
 
   if (loading) {
@@ -140,6 +143,25 @@ export function EasyApply() {
         <p className="fade-in-up text-xs text-black/50 dark:text-white/50">
           Each apply will take a few extra seconds to write a cover letter first (uses your active AI provider from Profile). Bulk apply caps this at {MAX_BULK_WITH_COVER_LETTER} jobs per batch.
         </p>
+      )}
+
+      {coverLetterProgress && (
+        <div className="fade-in-up rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900 px-4 py-2.5 space-y-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <span>✉️ Writing cover letters…</span>
+            <span className="tabular-nums text-black/60 dark:text-white/60">
+              {coverLetterProgress.done} / {coverLetterProgress.total}
+            </span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 transition-all duration-300 ease-out"
+              style={{
+                width: `${Math.max(4, Math.round((coverLetterProgress.done / Math.max(1, coverLetterProgress.total)) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {message && (

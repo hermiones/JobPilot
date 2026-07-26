@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { THEMES, getAppTheme, setAppTheme, type ThemeId } from "@/lib/theme";
+import { getBg3dEnabled, setBg3dEnabled } from "@/lib/bg3dPref";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
@@ -24,15 +25,21 @@ export function NavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeId>("default");
+  const [bg3d, setBg3d] = useState(false);
 
   useEffect(() => {
     setTheme(getAppTheme());
+    setBg3d(getBg3dEnabled());
   }, []);
 
   function pickTheme(id: ThemeId) {
     setTheme(id);
     setAppTheme(id);
-    setThemeOpen(false);
+  }
+
+  function toggleBg3d(checked: boolean) {
+    setBg3d(checked);
+    setBg3dEnabled(checked);
   }
 
   useEffect(() => {
@@ -104,7 +111,7 @@ export function NavBar() {
               {THEMES.find((t) => t.id === theme)?.emoji ?? "🎨"}
             </button>
             {themeOpen && (
-              <div className="fade-in-up absolute right-0 mt-2 w-44 rounded-md border border-black/10 dark:border-white/15 bg-white/95 dark:bg-black/90 backdrop-blur-md shadow-lg py-1 z-20">
+              <div className="fade-in-up absolute right-0 mt-2 w-52 rounded-md border border-black/10 dark:border-white/15 bg-white/95 dark:bg-black/90 backdrop-blur-md shadow-lg py-1 z-20">
                 {THEMES.map((t) => (
                   <button
                     key={t.id}
@@ -116,6 +123,16 @@ export function NavBar() {
                     <span>{t.emoji}</span> {t.label}
                   </button>
                 ))}
+                <div className="my-1 border-t border-black/5 dark:border-white/10" />
+                <label className="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-sm cursor-pointer hover:bg-black/5 dark:hover:bg-white/10">
+                  <span className="flex items-center gap-2">🌌 3D background</span>
+                  <input
+                    type="checkbox"
+                    checked={bg3d}
+                    onChange={(e) => toggleBg3d(e.target.checked)}
+                    className="h-4 w-4 accent-indigo-600"
+                  />
+                </label>
               </div>
             )}
           </div>

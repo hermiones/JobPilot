@@ -61,6 +61,12 @@ const STOPWORDS = new Set([
   "our","your","you","are","will","all","can","who","into","per","via","etc",
   "team","teams","work","working","years","year","experience","using","use",
   "used","build","built","developed","development","engineer","engineering",
+  // Short prepositions/articles/pronouns — these pass tokenize()'s length>=2
+  // filter but aren't skills, so they were inflating keyword-overlap scores
+  // (e.g. "in", "of", "time" counting the same as "kubernetes").
+  "in","of","to","is","as","at","on","or","be","it","we","an","if","by",
+  "so","no","do","did","does","been","being","not","but","than","then",
+  "such","also","each","other","some","any","own","same","time","times",
 ]);
 
 function resumeKeywords(resume: string): Set<string> {
@@ -157,7 +163,12 @@ export function scoreJob(
         score += 15;
         reasons.push(`Location matches "${job.location}"`);
       } else if (loc) {
-        reasons.push(`Location "${job.location}" outside preferences`);
+        // A location mismatch used to be a no-op (only matches earned
+        // points), so a strong title/keyword match alone could push a job
+        // on the other side of the world to a high score. Penalize it for
+        // real instead of just skipping the bonus.
+        score -= 20;
+        reasons.push(`Location "${job.location}" doesn't match your preferences`);
       }
     }
   }

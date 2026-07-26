@@ -11,7 +11,7 @@ const Background3D = dynamic(
 );
 
 export function BackgroundMount() {
-  const [enabled, setEnabled] = useState(true);
+  const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     setEnabled(getBg3dEnabled());
