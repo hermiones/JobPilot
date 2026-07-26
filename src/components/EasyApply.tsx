@@ -89,7 +89,7 @@ export function EasyApply() {
     });
     const data = await res.json();
     setMessage(
-      `⚡ Marked ${data.applied ?? 0} applications as applied.` +
+      `📝 Marked ${data.applied ?? 0} applications as applied in your tracker — remember, this didn't submit anything anywhere. Use the row-level "⚡ Apply" button (or Review Queue) to actually open and apply to each one.` +
         (withCoverLetter && ids.length > MAX_BULK_WITH_COVER_LETTER
           ? ` Cover letters written for the first ${MAX_BULK_WITH_COVER_LETTER} only (to keep this fast).`
           : "")
@@ -117,7 +117,8 @@ export function EasyApply() {
             Easy Apply
           </h1>
           <p className="text-sm text-black/60 dark:text-white/60">
-            Skip the review screen — one click per job, or batch-apply many at once.
+            Skip the review screen — open jobs one click at a time, or bulk-update your
+            tracker for ones you&apos;ve already applied to elsewhere.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -133,12 +134,24 @@ export function EasyApply() {
           <button
             onClick={bulkApply}
             disabled={selected.size === 0 || bulkBusy}
+            title="Marks these as applied in your tracker — doesn't open or submit anything on the employer's site."
             className="glow-accent rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100 transition-transform duration-150 hover:-translate-y-0.5"
           >
-            {bulkBusy ? "Applying…" : `⚡ Bulk apply (${selected.size})`}
+            {bulkBusy ? "Marking…" : `📝 Mark ${selected.size} as applied`}
           </button>
         </div>
       </div>
+
+      <div className="fade-in-up rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 px-4 py-2.5 text-sm text-amber-800 dark:text-amber-200">
+        ⚠️ <strong>Neither button submits anything on the employer&apos;s site.</strong>{" "}
+        <span className="text-amber-700 dark:text-amber-300">
+          Row-level &quot;⚡ Apply&quot; opens the real job posting in a new tab so you can
+          submit it yourself — but the batch button above only updates your tracker
+          (no tabs, no forms touched). Use it for jobs you&apos;ve already actually
+          applied to elsewhere, not as a way to auto-apply.
+        </span>
+      </div>
+
       {withCoverLetter && (
         <p className="fade-in-up text-xs text-black/50 dark:text-white/50">
           Each apply will take a few extra seconds to write a cover letter first (uses your active AI provider from Profile). Bulk apply caps this at {MAX_BULK_WITH_COVER_LETTER} jobs per batch.
@@ -228,6 +241,7 @@ export function EasyApply() {
                 <button
                   onClick={() => quickApply(item)}
                   disabled={busyId === item.application.id}
+                  title="Opens the real job posting in a new tab — you still submit it yourself there."
                   className="shrink-0 ml-auto sm:ml-0 rounded-md bg-gradient-to-r from-green-600 to-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:brightness-110 disabled:opacity-60 transition-transform duration-150 hover:-translate-y-0.5"
                 >
                   {busyId === item.application.id ? "…" : "⚡ Apply"}
